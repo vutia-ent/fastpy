@@ -20,7 +20,7 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 ## Prerequisites
 
 - Python 3.9 or higher
-- PostgreSQL 12+ OR MySQL 5.7+
+- PostgreSQL 12+ OR MySQL 5.7+ (MySQL 8.0+ recommended)
 - pip
 
 ## Quick Start
@@ -45,6 +45,14 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+**Note for MySQL users on macOS:**
+If you encounter issues installing `mysqlclient`, you may need:
+```bash
+brew install mysql
+export PATH="/usr/local/opt/mysql/bin:$PATH"
+pip install mysqlclient
+```
+
 ### 2. Database Setup
 
 **For PostgreSQL:**
@@ -60,11 +68,23 @@ CREATE DATABASE veke_db;
 
 **For MySQL:**
 ```bash
-# Create database
+# Login to MySQL
 mysql -u root -p
+
+# Create database
 CREATE DATABASE veke_db;
+
+# Verify database was created
+SHOW DATABASES;
+
+# Exit MySQL
 exit;
 ```
+
+**Important MySQL Notes:**
+- Make sure your MySQL server is running
+- Note your MySQL username and password for the `.env` file
+- Default MySQL credentials are usually `root` with your MySQL root password
 
 ### 3. Environment Configuration
 
@@ -97,6 +117,17 @@ alembic revision --autogenerate -m "Initial migration"
 # Apply migrations
 alembic upgrade head
 ```
+
+**Common Migration Issues:**
+
+**PostgreSQL:**
+- Error `FATAL: password authentication failed` → Check credentials in `.env`
+- Error `database does not exist` → Create database first: `createdb dbname`
+
+**MySQL:**
+- Error `Access denied for user` → Verify username/password in `.env`
+- Error `No module named 'MySQLdb'` → Run `pip install mysqlclient`
+- Error `Can't connect to MySQL server` → Start MySQL: `mysql.server start`
 
 ### 5. Start the Server
 
@@ -361,17 +392,31 @@ app.include_router(post_router, prefix="/api/posts", tags=["Posts"])
 
 This starter supports both **PostgreSQL** and **MySQL**. Configure in `.env`:
 
-### PostgreSQL (Default)
+### PostgreSQL
 ```env
 DB_DRIVER=postgresql
-DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+DATABASE_URL=postgresql://username:password@localhost:5432/dbname
 ```
+
+**Required drivers** (automatically installed):
+- `psycopg2-binary` - Synchronous driver for Alembic migrations
+- `asyncpg` - Async driver for FastAPI application
 
 ### MySQL
 ```env
 DB_DRIVER=mysql
-DATABASE_URL=mysql://user:pass@localhost:3306/dbname
+DATABASE_URL=mysql://username:password@localhost:3306/dbname
 ```
+
+**Required drivers** (automatically installed):
+- `mysqlclient` - Synchronous driver for Alembic migrations (provides MySQLdb)
+- `aiomysql` - Async driver for FastAPI application
+- `pymysql` - Alternative driver with pure Python implementation
+
+**Troubleshooting MySQL:**
+- Ensure MySQL server is running: `mysql.server start` (macOS) or `sudo service mysql start` (Linux)
+- If `mysqlclient` fails to install, install MySQL development headers first
+- Test connection: `mysql -u username -p`
 
 ## Environment Variables
 
