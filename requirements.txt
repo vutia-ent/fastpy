@@ -1,0 +1,45 @@
+# Core Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Data Validation
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# HTTP Client (for making API requests)
+httpx==0.28.0
+
+# Database
+sqlmodel==0.0.22
+alembic==1.14.0
+
+# PostgreSQL drivers (install if using PostgreSQL)
+psycopg2-binary==2.9.10
+asyncpg==0.30.0
+
+# MySQL drivers (install if using MySQL)
+pymysql==1.1.1
+aiomysql==0.2.0
+cryptography==44.0.0  # Required by pymysql
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20  # For form data
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+
+# Code Quality
+black==24.10.0
+ruff==0.8.2
+mypy==1.13.0
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# CLI Tool
+typer==0.15.1
+rich==13.9.4

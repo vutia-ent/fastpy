@@ -1,0 +1,78 @@
+[project]
+name = "veke-api"
+version = "0.1.0"
+description = "VE.KE API built with FastAPI"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi==0.115.5",
+    "uvicorn[standard]==0.32.1",
+    "pydantic==2.10.3",
+    "pydantic-settings==2.6.1",
+    "httpx==0.28.0",
+    "python-dotenv==1.0.1",
+    "sqlmodel==0.0.22",
+    "alembic==1.14.0",
+    "psycopg2-binary==2.9.10",
+    "asyncpg==0.30.0",
+    "pymysql==1.1.1",
+    "aiomysql==0.2.0",
+    "cryptography==44.0.0",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "python-multipart==0.0.20",
+    "typer==0.15.1",
+    "rich==13.9.4",
+]
+
+[project.scripts]
+artisan = "cli:app"
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
+    "black==24.10.0",
+    "ruff==0.8.2",
+    "mypy==1.13.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+asyncio_mode = "auto"
