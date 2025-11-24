@@ -5,13 +5,17 @@ uvicorn[standard]==0.32.1
 # Data Validation
 pydantic==2.10.3
 pydantic-settings==2.6.1
+pydantic[email]==2.10.3  # Email validation
 
-# HTTP Client (for making API requests)
+# HTTP Client & Async Support
 httpx==0.28.0
+aiofiles==24.1.0  # Async file operations
+python-multipart==0.0.20  # Form data & file uploads
 
 # Database
 sqlmodel==0.0.22
 alembic==1.14.0
+greenlet==3.2.4  # Required for async SQLAlchemy
 
 
 # PostgreSQL drivers (install if using PostgreSQL)
@@ -24,20 +28,32 @@ pymysql==1.1.1
 aiomysql==0.2.0
 cryptography==44.0.0  # Required by pymysql
 
-# Authentication
+# Authentication & Security
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.20  # For form data
+passlib==1.7.4
+bcrypt==4.2.1  # Compatible with passlib 1.7.4
+
+# Utilities
+python-dateutil==2.9.0  # Date/time utilities
+pytz==2024.2  # Timezone support
+python-slugify==8.0.4  # URL-friendly slugs
+
+# Templates (for emails, error pages, etc)
+jinja2==3.1.5
 
 # Testing
 pytest==8.3.4
 pytest-asyncio==0.24.0
 pytest-cov==6.0.0
+faker==33.1.0  # Generate fake data for tests
+httpx==0.28.0  # Already included above for testing
+factory-boy==3.3.1  # Test fixtures
 
 # Code Quality
 black==24.10.0
 ruff==0.8.2
 mypy==1.13.0
+pre-commit==4.0.1  # Git hooks for code quality
 
 # Environment Variables
 python-dotenv==1.0.1
@@ -45,3 +61,29 @@ python-dotenv==1.0.1
 # CLI Tool
 typer==0.15.1
 rich==13.9.4
+
+# ============================================
+# OPTIONAL PACKAGES (Install as needed)
+# ============================================
+
+# Email Sending (uncomment if needed)
+# emails==0.6
+
+# Caching with Redis (uncomment if needed)
+# redis==5.2.1
+
+# Background Tasks (uncomment if needed)
+# celery==5.4.0
+# flower==2.0.1  # Celery monitoring
+
+# Image Processing (uncomment if needed)
+# pillow==11.0.0
+
+# Error Tracking (uncomment if needed)
+# sentry-sdk[fastapi]==2.19.2
+
+# Rate Limiting (uncomment if needed)
+# slowapi==0.1.9
+
+# API Documentation Enhancements (uncomment if needed)
+# markdown==3.7  # Markdown in API docs

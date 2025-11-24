@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication, MVC architecture, and code generation CLI. Features soft deletes, automatic timestamps, password hashing, and clean folder structure.
+Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication, MVC architecture, and FastCLI code generator. Features soft deletes, automatic timestamps, password hashing, intelligent field validation, and clean folder structure.
 
 ## Technology Stack
 
@@ -13,7 +13,7 @@ Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT au
 - **Database**: PostgreSQL OR MySQL (configurable via .env)
 - **Authentication**: JWT with bcrypt password hashing
 - **Migrations**: Alembic
-- **CLI**: Typer (code generation commands)
+- **CLI**: FastCLI (Typer-based code generator with automatic validation)
 - **Language**: Python 3.9+
 
 ## Development Commands
@@ -28,22 +28,22 @@ uvicorn main:app --reload
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Code Generation CLI
+### FastCLI - Code Generation
 
 ```bash
 # List all available commands
 python cli.py list
+# Or after install: fastcli list
 
-# Generate resources
-python cli.py make:model BlogPost
-python cli.py make:model BlogPost --migration
-python cli.py make:controller BlogPost
-python cli.py make:route BlogPost
-python cli.py make:resource BlogPost --migration  # All at once
+# Generate resources with field definitions
+fastcli make:model Post -f title:string:required,max:200 -f body:text:required -m
+fastcli make:controller Post
+fastcli make:route Post --protected
+fastcli make:resource Post -i -m -p  # Interactive mode, migration, protected
 
-# After pip install -e ., you can use the 'artisan' shortcut:
-artisan make:model Post
-artisan make:resource Comment -m
+# Field definition syntax: name:type:rules
+# Types: string, text, integer, float, boolean, datetime, email, url, json
+# Rules: required, nullable, unique, index, max:N, min:N, foreign:table.column
 ```
 
 ### Database Migrations
@@ -224,7 +224,7 @@ python cli.py make:route BlogPost
 python cli.py make:resource BlogPost -m  # Creates all at once
 
 # After install (pip install -e .), use 'artisan' command
-artisan make:resource Post -m
+fastcli make:resource Post -m
 ```
 
 ## Important Notes
