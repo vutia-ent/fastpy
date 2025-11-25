@@ -4,12 +4,16 @@ FastCLI - Code generation CLI tool for FastAPI project
 Usage: python cli.py [command] or fastcli [command] (after pip install -e .)
 """
 import typer
+import subprocess
+import sys
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt, Confirm
+from rich.panel import Panel
 from pathlib import Path
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 app = typer.Typer(help="Code generation CLI for FastAPI")
 console = Console()
@@ -26,17 +30,44 @@ def to_pascal_case(name: str) -> str:
     return "".join(word.capitalize() for word in name.split("_"))
 
 
-# Field type mappings
+def to_kebab_case(name: str) -> str:
+    """Convert to kebab-case"""
+    return to_snake_case(name).replace("_", "-")
+
+
+def pluralize(name: str) -> str:
+    """Simple pluralization"""
+    if name.endswith("y"):
+        return name[:-1] + "ies"
+    elif name.endswith(("s", "x", "z", "ch", "sh")):
+        return name + "es"
+    return name + "s"
+
+
+# Field type mappings with enhanced types
 FIELD_TYPES = {
     "string": {"python": "str", "sqlmodel": "Field(nullable=False, max_length=255)"},
     "text": {"python": "str", "sqlmodel": "Field(nullable=False)"},
     "integer": {"python": "int", "sqlmodel": "Field(nullable=False)"},
+    "bigint": {"python": "int", "sqlmodel": "Field(nullable=False)"},
     "float": {"python": "float", "sqlmodel": "Field(nullable=False)"},
+    "decimal": {"python": "Decimal", "sqlmodel": "Field(max_digits=10, decimal_places=2)"},
+    "money": {"python": "Decimal", "sqlmodel": "Field(max_digits=15, decimal_places=2)"},
+    "percent": {"python": "Decimal", "sqlmodel": "Field(ge=0, le=100, decimal_places=2)"},
     "boolean": {"python": "bool", "sqlmodel": "Field(default=False)"},
-    "datetime": {"python": "datetime", "sqlmodel": "Field(default_factory=datetime.utcnow)"},
+    "datetime": {"python": "datetime", "sqlmodel": "Field(default_factory=utc_now)"},
+    "date": {"python": "date", "sqlmodel": "Field(nullable=False)"},
+    "time": {"python": "time", "sqlmodel": "Field(nullable=False)"},
     "email": {"python": "EmailStr", "sqlmodel": "Field(nullable=False, max_length=255, index=True)"},
     "url": {"python": "str", "sqlmodel": "Field(nullable=False, max_length=500)"},
+    "uuid": {"python": "UUID", "sqlmodel": "Field(default_factory=uuid4)"},
     "json": {"python": "dict", "sqlmodel": "Field(default={}, sa_column=Column(JSON))"},
+    "phone": {"python": "str", "sqlmodel": "Field(nullable=False, max_length=20)"},
+    "slug": {"python": "str", "sqlmodel": "Field(nullable=False, unique=True, index=True, max_length=255)"},
+    "ip": {"python": "str", "sqlmodel": "Field(nullable=False, max_length=45)"},
+    "color": {"python": "str", "sqlmodel": "Field(nullable=False, max_length=7)"},
+    "file": {"python": "str", "sqlmodel": "Field(nullable=True, max_length=500)"},
+    "image": {"python": "str", "sqlmodel": "Field(nullable=True, max_length=500)"},
 }
 
 # Validation rules for Pydantic schemas
@@ -105,8 +136,13 @@ class FieldDefinition:
         type_info = FIELD_TYPES.get(self.field_type, FIELD_TYPES["string"])
         python_type = type_info["python"]
 
+        if self.nullable:
+            python_type = f"Optional[{python_type}]"
+
         # Build validation
         params = []
+        if self.nullable:
+            params.append("default=None")
         if self.min_length:
             params.append(f"min_length={self.min_length}")
         if self.max_length:
@@ -167,7 +203,6 @@ def parse_field_definition(field_str: str) -> FieldDefinition:
     # Parse rules
     for rule in rules:
         if "," in rule:
-            # Multiple rules in one part
             for r in rule.split(","):
                 process_rule(r, kwargs)
         else:
@@ -217,7 +252,7 @@ def prompt_for_fields() -> List[FieldDefinition]:
     console.print(
         "[yellow]Format:[/yellow] name:type:rules (e.g., email:email:required,unique)"
     )
-    console.print("[yellow]Available types:[/yellow] string, text, integer, float, boolean, datetime, email, url, json")
+    console.print(f"[yellow]Available types:[/yellow] {', '.join(FIELD_TYPES.keys())}")
     console.print("[yellow]Available rules:[/yellow] required, nullable, unique, index, max:N, min:N, foreign:table.column")
     console.print("[dim]Press Enter with empty field name to finish[/dim]\n")
 
@@ -237,6 +272,10 @@ def prompt_for_fields() -> List[FieldDefinition]:
     return fields
 
 
+# ============================================
+# Model Generation Commands
+# ============================================
+
 @app.command("make:model")
 def make_model(
     name: str = typer.Argument(..., help="Model name (e.g., BlogPost)"),
@@ -251,7 +290,7 @@ def make_model(
 ):
     """Create a new model with field definitions and automatic validation"""
     model_name = to_pascal_case(name)
-    table_name = to_snake_case(name) + "s"  # Pluralize
+    table_name = pluralize(to_snake_case(name))
     file_name = to_snake_case(name) + ".py"
     file_path = Path(f"app/models/{file_name}")
 
@@ -272,25 +311,31 @@ def make_model(
                 console.print(f"[red]Error parsing field '{field_str}':[/red] {e}")
                 raise typer.Exit(1)
     else:
-        # Default field
         field_defs = [FieldDefinition("name", "string", nullable=False, max_length=255)]
 
     # Generate imports
-    imports = ["from typing import Optional", "from sqlmodel import Field"]
+    imports = ["from typing import Optional", "from datetime import datetime", "from sqlmodel import Field"]
 
     # Check if we need additional imports
-    needs_datetime = any(f.field_type == "datetime" for f in field_defs)
+    needs_date = any(f.field_type == "date" for f in field_defs)
+    needs_time = any(f.field_type == "time" for f in field_defs)
     needs_email = any(f.field_type == "email" for f in field_defs)
     needs_json = any(f.field_type == "json" for f in field_defs)
+    needs_uuid = any(f.field_type == "uuid" for f in field_defs)
+    needs_decimal = any(f.field_type in ["decimal", "money", "percent"] for f in field_defs)
 
-    if needs_datetime:
-        imports.append("from datetime import datetime")
+    if needs_date or needs_time:
+        imports[1] = "from datetime import datetime, date, time"
     if needs_email:
         imports.append("from pydantic import EmailStr")
     if needs_json:
         imports.append("from sqlalchemy import Column, JSON")
+    if needs_uuid:
+        imports.append("from uuid import UUID, uuid4")
+    if needs_decimal:
+        imports.append("from decimal import Decimal")
 
-    imports.append("from app.models.base import BaseModel")
+    imports.append("from app.models.base import BaseModel, utc_now")
 
     # Generate model fields
     model_fields = "\n".join([f.get_model_field() for f in field_defs])
@@ -367,7 +412,7 @@ class {model_name}Update(BaseModel):
 
 @app.command("make:controller")
 def make_controller(name: str = typer.Argument(..., help="Controller name (e.g., BlogPost)")):
-    """Create a new controller"""
+    """Create a new controller with CRUD operations"""
     controller_name = to_pascal_case(name) + "Controller"
     model_name = to_pascal_case(name)
     file_name = to_snake_case(name) + "_controller.py"
@@ -377,13 +422,13 @@ def make_controller(name: str = typer.Argument(..., help="Controller name (e.g.,
         console.print(f"[red]Controller already exists:[/red] {file_path}")
         raise typer.Exit(1)
 
-    controller_template = f'''from typing import List
-from datetime import datetime
+    controller_template = f'''from typing import List, Optional
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update
+from app.utils.pagination import paginate, PaginatedResult
 
 
 class {controller_name}:
@@ -394,7 +439,26 @@ class {controller_name}:
         """Get all non-deleted {to_snake_case(name)}s"""
         query = select({model_name}).where({model_name}.deleted_at.is_(None)).offset(skip).limit(limit)
         result = await session.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_paginated(
+        session: AsyncSession,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc"
+    ) -> PaginatedResult[{model_name}]:
+        """Get paginated {to_snake_case(name)}s"""
+        query = select({model_name}).where({model_name}.deleted_at.is_(None))
+        return await paginate(
+            session=session,
+            query=query,
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
 
     @staticmethod
     async def get_by_id(session: AsyncSession, id: int) -> {model_name}:
@@ -414,7 +478,7 @@ class {controller_name}:
         """
         item = {model_name}(**data.model_dump())
         session.add(item)
-        await session.commit()
+        await session.flush()
         await session.refresh(item)
         return item
 
@@ -430,9 +494,9 @@ class {controller_name}:
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(item, field, value)
 
-        item.updated_at = datetime.utcnow()
+        item.touch()
         session.add(item)
-        await session.commit()
+        await session.flush()
         await session.refresh(item)
         return item
 
@@ -442,7 +506,7 @@ class {controller_name}:
         item = await {controller_name}.get_by_id(session, id)
         item.soft_delete()
         session.add(item)
-        await session.commit()
+        await session.flush()
         return {{"message": "{model_name} deleted successfully"}}
 
     @staticmethod
@@ -456,9 +520,24 @@ class {controller_name}:
 
         item.restore()
         session.add(item)
-        await session.commit()
+        await session.flush()
         await session.refresh(item)
         return item
+
+    @staticmethod
+    async def count(session: AsyncSession) -> int:
+        """Count total {to_snake_case(name)}s"""
+        from sqlalchemy import func
+        query = select(func.count({model_name}.id)).where({model_name}.deleted_at.is_(None))
+        result = await session.execute(query)
+        return result.scalar() or 0
+
+    @staticmethod
+    async def exists(session: AsyncSession, id: int) -> bool:
+        """Check if {to_snake_case(name)} exists"""
+        query = select({model_name}.id).where({model_name}.id == id, {model_name}.deleted_at.is_(None))
+        result = await session.execute(query)
+        return result.scalar_one_or_none() is not None
 '''
 
     file_path.write_text(controller_template)
@@ -470,11 +549,12 @@ def make_route(
     name: str = typer.Argument(..., help="Route name (e.g., BlogPost)"),
     protected: bool = typer.Option(False, "--protected", "-p", help="Add authentication"),
 ):
-    """Create a new route file"""
+    """Create a new route file with all CRUD endpoints"""
     model_name = to_pascal_case(name)
     controller_name = model_name + "Controller"
     file_name = to_snake_case(name) + "_routes.py"
     file_path = Path(f"app/routes/{file_name}")
+    route_prefix = pluralize(to_snake_case(name))
 
     if file_path.exists():
         console.print(f"[red]Route already exists:[/red] {file_path}")
@@ -484,26 +564,59 @@ def make_route(
     auth_import = ""
     auth_dep = ""
     if protected:
-        auth_import = "\nfrom app.utils.auth import get_current_user\nfrom app.models.user import User"
-        auth_dep = ", current_user: User = Depends(get_current_user)"
+        auth_import = "\nfrom app.utils.auth import get_current_active_user\nfrom app.models.user import User"
+        auth_dep = ", current_user: User = Depends(get_current_active_user)"
 
-    route_template = f'''from typing import List
-from fastapi import APIRouter, Depends
+    route_template = f'''from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_session
 from app.controllers.{to_snake_case(name)}_controller import {controller_name}
-from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read{auth_import}
+from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
+from app.config.settings import settings{auth_import}
 
 router = APIRouter()
 
 
 @router.get("/", response_model=List[{model_name}Read])
 async def get_all(
-    skip: int = 0, limit: int = 100, session: AsyncSession = Depends(get_session){auth_dep}
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    session: AsyncSession = Depends(get_session){auth_dep}
 ):
     """Get all {to_snake_case(name)}s"""
     return await {controller_name}.get_all(session, skip, limit)
+
+
+@router.get("/paginated")
+async def get_paginated(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    session: AsyncSession = Depends(get_session){auth_dep}
+) -> Dict[str, Any]:
+    """Get paginated {to_snake_case(name)}s with sorting"""
+    result = await {controller_name}.get_paginated(session, page, per_page, sort_by, sort_order)
+    return {{
+        "data": result.items,
+        "pagination": {{
+            "page": result.page,
+            "per_page": result.per_page,
+            "total": result.total,
+            "pages": result.pages,
+            "has_next": result.has_next,
+            "has_prev": result.has_prev
+        }}
+    }}
+
+
+@router.get("/count")
+async def count(session: AsyncSession = Depends(get_session){auth_dep}) -> Dict[str, int]:
+    """Get total count"""
+    count = await {controller_name}.count(session)
+    return {{"count": count}}
 
 
 @router.get("/{{id}}", response_model={model_name}Read)
@@ -512,12 +625,19 @@ async def get_one(id: int, session: AsyncSession = Depends(get_session){auth_dep
     return await {controller_name}.get_by_id(session, id)
 
 
+@router.head("/{{id}}", status_code=status.HTTP_200_OK)
+async def check_exists(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
+    """Check if {to_snake_case(name)} exists"""
+    exists = await {controller_name}.exists(session, id)
+    if not exists:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="{model_name} not found")
+    return None
+
+
 @router.post("/", response_model={model_name}Read, status_code=201)
 async def create(data: {model_name}Create, session: AsyncSession = Depends(get_session){auth_dep}):
-    """
-    Create a new {to_snake_case(name)}.
-    All validation rules defined in {model_name}Create schema are enforced.
-    """
+    """Create a new {to_snake_case(name)}"""
     return await {controller_name}.create(session, data)
 
 
@@ -525,10 +645,15 @@ async def create(data: {model_name}Create, session: AsyncSession = Depends(get_s
 async def update(
     id: int, data: {model_name}Update, session: AsyncSession = Depends(get_session){auth_dep}
 ):
-    """
-    Update a {to_snake_case(name)}.
-    Only provided fields will be updated.
-    """
+    """Full update a {to_snake_case(name)}"""
+    return await {controller_name}.update(session, id, data)
+
+
+@router.patch("/{{id}}", response_model={model_name}Read)
+async def partial_update(
+    id: int, data: {model_name}Update, session: AsyncSession = Depends(get_session){auth_dep}
+):
+    """Partial update a {to_snake_case(name)}"""
     return await {controller_name}.update(session, id, data)
 
 
@@ -555,7 +680,7 @@ async def restore(id: int, session: AsyncSession = Depends(get_session){auth_dep
         f'  from app.routes.{to_snake_case(name)}_routes import router as {to_snake_case(name)}_router'
     )
     console.print(
-        f'  app.include_router({to_snake_case(name)}_router, prefix="/api/{to_snake_case(name)}s", tags=["{model_name}s"])'
+        f'  app.include_router({to_snake_case(name)}_router, prefix="/api/{route_prefix}", tags=["{model_name}s"])'
     )
 
 
@@ -572,7 +697,7 @@ def make_resource(
     migration: bool = typer.Option(False, "--migration", "-m", help="Create migration"),
     protected: bool = typer.Option(False, "--protected", "-p", help="Add authentication"),
 ):
-    """Create model, controller, and routes all at once with intelligent field definitions"""
+    """Create model, controller, and routes all at once"""
     console.print(f"[cyan]Creating resource:[/cyan] {name}\n")
 
     # Create model
@@ -591,13 +716,739 @@ def make_resource(
     make_route(name, protected=protected)
 
     if migration:
-        table_name = to_snake_case(name) + "s"
+        table_name = pluralize(to_snake_case(name))
         console.print("\n[yellow]Run migration commands:[/yellow]")
         console.print(f'  alembic revision --autogenerate -m "Create {table_name} table"')
         console.print("  alembic upgrade head")
 
     console.print(f"\n[green]✓ Resource '{name}' created successfully![/green]")
 
+
+# ============================================
+# Service and Repository Commands
+# ============================================
+
+@app.command("make:service")
+def make_service(name: str = typer.Argument(..., help="Service name (e.g., Payment)")):
+    """Create a new service class"""
+    service_name = to_pascal_case(name) + "Service"
+    model_name = to_pascal_case(name)
+    repo_name = to_pascal_case(name) + "Repository"
+    file_name = to_snake_case(name) + "_service.py"
+    file_path = Path(f"app/services/{file_name}")
+
+    if file_path.exists():
+        console.print(f"[red]Service already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    service_template = f'''"""
+{model_name} service for business logic.
+"""
+from typing import Any, Dict, List, Optional
+
+from app.services.base import BaseService
+from app.repositories.{to_snake_case(name)}_repository import {repo_name}
+from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update
+
+
+class {service_name}(BaseService[{model_name}, {repo_name}]):
+    """Service for {model_name} operations"""
+
+    repository_class = {repo_name}
+
+    async def create_{to_snake_case(name)}(self, data: {model_name}Create) -> {model_name}:
+        """Create a new {to_snake_case(name)} with business logic"""
+        # Add any business logic here
+        return await self.repository.create(data.model_dump())
+
+    async def update_{to_snake_case(name)}(self, id: int, data: {model_name}Update) -> {model_name}:
+        """Update a {to_snake_case(name)} with business logic"""
+        # Add any business logic here
+        return await self.repository.update(id, data.model_dump(exclude_unset=True))
+
+    # Add custom business methods here
+'''
+
+    file_path.write_text(service_template)
+    console.print(f"[green]✓[/green] Service created: {file_path}")
+    console.print(f"[yellow]Note:[/yellow] You may need to create the repository first with: fastcli make:repository {name}")
+
+
+@app.command("make:repository")
+def make_repository(name: str = typer.Argument(..., help="Repository name (e.g., Payment)")):
+    """Create a new repository class"""
+    repo_name = to_pascal_case(name) + "Repository"
+    model_name = to_pascal_case(name)
+    file_name = to_snake_case(name) + "_repository.py"
+    file_path = Path(f"app/repositories/{file_name}")
+
+    if file_path.exists():
+        console.print(f"[red]Repository already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    repo_template = f'''"""
+{model_name} repository for database operations.
+"""
+from typing import Optional, List
+from sqlmodel import select
+
+from app.repositories.base import BaseRepository
+from app.models.{to_snake_case(name)} import {model_name}
+
+
+class {repo_name}(BaseRepository[{model_name}]):
+    """Repository for {model_name} model"""
+
+    model = {model_name}
+
+    # Add custom query methods here
+    # Example:
+    # async def get_by_status(self, status: str) -> List[{model_name}]:
+    #     query = select(self.model).where(
+    #         self.model.status == status,
+    #         self.model.deleted_at.is_(None)
+    #     )
+    #     result = await self.session.execute(query)
+    #     return list(result.scalars().all())
+'''
+
+    file_path.write_text(repo_template)
+    console.print(f"[green]✓[/green] Repository created: {file_path}")
+
+
+# ============================================
+# Middleware Command
+# ============================================
+
+@app.command("make:middleware")
+def make_middleware(name: str = typer.Argument(..., help="Middleware name (e.g., Logging)")):
+    """Create a new middleware"""
+    middleware_name = to_pascal_case(name) + "Middleware"
+    file_name = to_snake_case(name) + ".py"
+    file_path = Path(f"app/middleware/{file_name}")
+
+    if file_path.exists():
+        console.print(f"[red]Middleware already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    middleware_template = f'''"""
+{to_pascal_case(name)} middleware.
+"""
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response
+
+from app.utils.logger import logger
+
+
+class {middleware_name}(BaseHTTPMiddleware):
+    """
+    {to_pascal_case(name)} middleware.
+    Add your middleware logic here.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        # Before request processing
+        logger.debug(f"{{request.method}} {{request.url.path}}")
+
+        # Process the request
+        response = await call_next(request)
+
+        # After request processing
+        # Add your logic here
+
+        return response
+'''
+
+    file_path.write_text(middleware_template)
+    console.print(f"[green]✓[/green] Middleware created: {file_path}")
+    console.print("\n[yellow]Add to main.py:[/yellow]")
+    console.print(f"  from app.middleware.{to_snake_case(name)} import {middleware_name}")
+    console.print(f"  app.add_middleware({middleware_name})")
+
+
+# ============================================
+# Test and Factory Commands
+# ============================================
+
+@app.command("make:test")
+def make_test(name: str = typer.Argument(..., help="Test name (e.g., User)")):
+    """Create a test file for a model"""
+    model_name = to_pascal_case(name)
+    file_name = f"test_{to_snake_case(name)}.py"
+    file_path = Path(f"tests/{file_name}")
+
+    # Ensure tests directory exists
+    Path("tests").mkdir(exist_ok=True)
+
+    if file_path.exists():
+        console.print(f"[red]Test file already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    test_template = f'''"""
+Tests for {model_name} endpoints.
+"""
+import pytest
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from main import app
+from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create
+
+
+@pytest.fixture
+def {to_snake_case(name)}_data():
+    """Sample {to_snake_case(name)} data for testing"""
+    return {{
+        "name": "Test {model_name}",
+        # Add more fields as needed
+    }}
+
+
+class Test{model_name}Endpoints:
+    """Test suite for {model_name} API endpoints"""
+
+    @pytest.mark.asyncio
+    async def test_create_{to_snake_case(name)}(self, {to_snake_case(name)}_data):
+        """Test creating a new {to_snake_case(name)}"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/api/{pluralize(to_snake_case(name))}/",
+                json={to_snake_case(name)}_data
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert data["name"] == {to_snake_case(name)}_data["name"]
+            assert "id" in data
+
+    @pytest.mark.asyncio
+    async def test_get_{to_snake_case(name)}s(self):
+        """Test getting all {to_snake_case(name)}s"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            response = await client.get("/api/{pluralize(to_snake_case(name))}/")
+            assert response.status_code == 200
+            assert isinstance(response.json(), list)
+
+    @pytest.mark.asyncio
+    async def test_get_{to_snake_case(name)}_by_id(self, {to_snake_case(name)}_data):
+        """Test getting a {to_snake_case(name)} by ID"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            # First create a {to_snake_case(name)}
+            create_response = await client.post(
+                "/api/{pluralize(to_snake_case(name))}/",
+                json={to_snake_case(name)}_data
+            )
+            created_id = create_response.json()["id"]
+
+            # Then get it
+            response = await client.get(f"/api/{pluralize(to_snake_case(name))}/{{created_id}}")
+            assert response.status_code == 200
+            assert response.json()["id"] == created_id
+
+    @pytest.mark.asyncio
+    async def test_get_{to_snake_case(name)}_not_found(self):
+        """Test getting a non-existent {to_snake_case(name)}"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            response = await client.get("/api/{pluralize(to_snake_case(name))}/99999")
+            assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_update_{to_snake_case(name)}(self, {to_snake_case(name)}_data):
+        """Test updating a {to_snake_case(name)}"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            # First create a {to_snake_case(name)}
+            create_response = await client.post(
+                "/api/{pluralize(to_snake_case(name))}/",
+                json={to_snake_case(name)}_data
+            )
+            created_id = create_response.json()["id"]
+
+            # Then update it
+            update_data = {{"name": "Updated {model_name}"}}
+            response = await client.put(
+                f"/api/{pluralize(to_snake_case(name))}/{{created_id}}",
+                json=update_data
+            )
+            assert response.status_code == 200
+            assert response.json()["name"] == "Updated {model_name}"
+
+    @pytest.mark.asyncio
+    async def test_delete_{to_snake_case(name)}(self, {to_snake_case(name)}_data):
+        """Test soft deleting a {to_snake_case(name)}"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            # First create a {to_snake_case(name)}
+            create_response = await client.post(
+                "/api/{pluralize(to_snake_case(name))}/",
+                json={to_snake_case(name)}_data
+            )
+            created_id = create_response.json()["id"]
+
+            # Then delete it
+            response = await client.delete(f"/api/{pluralize(to_snake_case(name))}/{{created_id}}")
+            assert response.status_code == 200
+
+            # Verify it's deleted (soft delete)
+            get_response = await client.get(f"/api/{pluralize(to_snake_case(name))}/{{created_id}}")
+            assert get_response.status_code == 404
+'''
+
+    file_path.write_text(test_template)
+    console.print(f"[green]✓[/green] Test file created: {file_path}")
+
+
+@app.command("make:factory")
+def make_factory(name: str = typer.Argument(..., help="Factory name (e.g., User)")):
+    """Create a test factory for a model"""
+    model_name = to_pascal_case(name)
+    factory_name = to_pascal_case(name) + "Factory"
+    file_name = f"{to_snake_case(name)}_factory.py"
+    file_path = Path(f"tests/factories/{file_name}")
+
+    # Ensure factories directory exists
+    Path("tests/factories").mkdir(parents=True, exist_ok=True)
+
+    # Create __init__.py if it doesn't exist
+    init_path = Path("tests/factories/__init__.py")
+    if not init_path.exists():
+        init_path.write_text('"""Test factories."""\n')
+
+    if file_path.exists():
+        console.print(f"[red]Factory already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    factory_template = f'''"""
+Factory for {model_name} model.
+"""
+import factory
+from faker import Faker
+
+from app.models.{to_snake_case(name)} import {model_name}
+
+fake = Faker()
+
+
+class {factory_name}(factory.Factory):
+    """Factory for creating {model_name} instances"""
+
+    class Meta:
+        model = {model_name}
+
+    name = factory.LazyFunction(lambda: fake.name())
+    # Add more fields as needed
+    # email = factory.LazyFunction(lambda: fake.email())
+    # description = factory.LazyFunction(lambda: fake.text())
+
+    @classmethod
+    def create_batch_dict(cls, size: int) -> list:
+        """Create a batch of {model_name} dictionaries"""
+        return [cls.build().__dict__ for _ in range(size)]
+'''
+
+    file_path.write_text(factory_template)
+    console.print(f"[green]✓[/green] Factory created: {file_path}")
+
+
+# ============================================
+# Seeder Commands
+# ============================================
+
+@app.command("make:seeder")
+def make_seeder(name: str = typer.Argument(..., help="Seeder name (e.g., User)")):
+    """Create a database seeder"""
+    seeder_name = to_pascal_case(name) + "Seeder"
+    model_name = to_pascal_case(name)
+    file_name = f"{to_snake_case(name)}_seeder.py"
+    file_path = Path(f"app/seeders/{file_name}")
+
+    if file_path.exists():
+        console.print(f"[red]Seeder already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    seeder_template = f'''"""
+Seeder for {model_name} model.
+"""
+from typing import List
+from faker import Faker
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.{to_snake_case(name)} import {model_name}
+
+fake = Faker()
+
+
+class {seeder_name}:
+    """Seeder for {model_name} data"""
+
+    @staticmethod
+    async def run(session: AsyncSession, count: int = 10) -> List[{model_name}]:
+        """
+        Seed {to_snake_case(name)}s into the database.
+
+        Args:
+            session: Database session
+            count: Number of records to create
+
+        Returns:
+            List of created {model_name}s
+        """
+        items = []
+        for _ in range(count):
+            item = {model_name}(
+                name=fake.name(),
+                # Add more fields as needed
+            )
+            session.add(item)
+            items.append(item)
+
+        await session.flush()
+
+        for item in items:
+            await session.refresh(item)
+
+        return items
+
+    @staticmethod
+    def get_sample_data() -> dict:
+        """Get sample data for a single {to_snake_case(name)}"""
+        return {{
+            "name": fake.name(),
+            # Add more fields as needed
+        }}
+'''
+
+    file_path.write_text(seeder_template)
+    console.print(f"[green]✓[/green] Seeder created: {file_path}")
+
+
+# ============================================
+# Enum Command
+# ============================================
+
+@app.command("make:enum")
+def make_enum(
+    name: str = typer.Argument(..., help="Enum name (e.g., Status)"),
+    values: List[str] = typer.Option(
+        None,
+        "--value",
+        "-v",
+        help="Enum value (e.g., -v active -v inactive)",
+    ),
+):
+    """Create an enum class"""
+    enum_name = to_pascal_case(name)
+    file_name = f"{to_snake_case(name)}.py"
+    file_path = Path(f"app/enums/{file_name}")
+
+    if file_path.exists():
+        console.print(f"[red]Enum already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    if not values:
+        values = ["active", "inactive"]
+        console.print(f"[yellow]No values provided, using defaults: {values}[/yellow]")
+
+    enum_values = "\n".join([f'    {v.upper()} = "{v.lower()}"' for v in values])
+
+    enum_template = f'''"""
+{enum_name} enum.
+"""
+from enum import Enum
+
+
+class {enum_name}(str, Enum):
+    """
+    {enum_name} enumeration.
+    """
+
+{enum_values}
+
+    @classmethod
+    def values(cls) -> list:
+        """Get all enum values"""
+        return [e.value for e in cls]
+
+    @classmethod
+    def from_value(cls, value: str) -> "{enum_name}":
+        """Get enum from value"""
+        for e in cls:
+            if e.value == value:
+                return e
+        raise ValueError(f"Invalid {enum_name} value: {{value}}")
+'''
+
+    file_path.write_text(enum_template)
+    console.print(f"[green]✓[/green] Enum created: {file_path}")
+    console.print(f"[cyan]Values:[/cyan] {', '.join(values)}")
+
+
+# ============================================
+# Exception Command
+# ============================================
+
+@app.command("make:exception")
+def make_exception(
+    name: str = typer.Argument(..., help="Exception name (e.g., PaymentFailed)"),
+    status_code: int = typer.Option(400, "--status", "-s", help="HTTP status code"),
+):
+    """Create a custom exception class"""
+    exception_name = to_pascal_case(name) + "Exception"
+    error_code = to_snake_case(name).upper()
+
+    # Append to exceptions.py
+    exceptions_path = Path("app/utils/exceptions.py")
+
+    if not exceptions_path.exists():
+        console.print(f"[red]Exceptions file not found:[/red] {exceptions_path}")
+        raise typer.Exit(1)
+
+    exception_code = f'''
+
+class {exception_name}(AppException):
+    """{to_pascal_case(name)} exception"""
+
+    def __init__(self, message: str = "{to_pascal_case(name)} error"):
+        super().__init__(
+            message=message,
+            status_code={status_code},
+            error_code="{error_code}"
+        )
+'''
+
+    with open(exceptions_path, "a") as f:
+        f.write(exception_code)
+
+    console.print(f"[green]✓[/green] Exception added to: {exceptions_path}")
+    console.print(f"[cyan]Class:[/cyan] {exception_name}")
+    console.print(f"[cyan]Status Code:[/cyan] {status_code}")
+    console.print(f"[cyan]Error Code:[/cyan] {error_code}")
+
+
+# ============================================
+# Database Commands
+# ============================================
+
+@app.command("db:migrate")
+def db_migrate(
+    message: str = typer.Option(None, "--message", "-m", help="Migration message"),
+):
+    """Run database migrations (alembic upgrade head)"""
+    console.print("[cyan]Running database migrations...[/cyan]")
+
+    result = subprocess.run(
+        ["alembic", "upgrade", "head"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        console.print("[green]✓[/green] Migrations completed successfully")
+        if result.stdout:
+            console.print(result.stdout)
+    else:
+        console.print("[red]✗[/red] Migration failed")
+        console.print(result.stderr)
+        raise typer.Exit(1)
+
+
+@app.command("db:rollback")
+def db_rollback(
+    steps: int = typer.Option(1, "--steps", "-s", help="Number of migrations to rollback"),
+):
+    """Rollback database migrations"""
+    console.print(f"[cyan]Rolling back {steps} migration(s)...[/cyan]")
+
+    result = subprocess.run(
+        ["alembic", "downgrade", f"-{steps}"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        console.print("[green]✓[/green] Rollback completed successfully")
+        if result.stdout:
+            console.print(result.stdout)
+    else:
+        console.print("[red]✗[/red] Rollback failed")
+        console.print(result.stderr)
+        raise typer.Exit(1)
+
+
+@app.command("db:fresh")
+def db_fresh():
+    """Drop all tables and re-run migrations"""
+    if not Confirm.ask("[yellow]This will drop all tables. Are you sure?[/yellow]"):
+        console.print("Cancelled.")
+        raise typer.Exit(0)
+
+    console.print("[cyan]Dropping all tables...[/cyan]")
+
+    # Downgrade to base
+    result = subprocess.run(
+        ["alembic", "downgrade", "base"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        console.print("[red]✗[/red] Failed to drop tables")
+        console.print(result.stderr)
+        raise typer.Exit(1)
+
+    console.print("[green]✓[/green] Tables dropped")
+
+    # Upgrade to head
+    console.print("[cyan]Running migrations...[/cyan]")
+    result = subprocess.run(
+        ["alembic", "upgrade", "head"],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        console.print("[green]✓[/green] Fresh database created")
+    else:
+        console.print("[red]✗[/red] Migration failed")
+        console.print(result.stderr)
+        raise typer.Exit(1)
+
+
+@app.command("db:seed")
+def db_seed(
+    seeder: str = typer.Option(None, "--seeder", "-s", help="Specific seeder to run"),
+    count: int = typer.Option(10, "--count", "-c", help="Number of records"),
+):
+    """Run database seeders"""
+    console.print("[cyan]Running database seeders...[/cyan]")
+
+    seed_script = f'''
+import asyncio
+from app.database.connection import async_session_maker
+
+async def run_seeders():
+    async with async_session_maker() as session:
+        try:
+'''
+
+    if seeder:
+        seeder_class = to_pascal_case(seeder) + "Seeder"
+        seed_script += f'''
+            from app.seeders.{to_snake_case(seeder)}_seeder import {seeder_class}
+            items = await {seeder_class}.run(session, count={count})
+            print(f"Created {{len(items)}} {to_snake_case(seeder)}s")
+'''
+    else:
+        # Run all seeders
+        seeders_path = Path("app/seeders")
+        if seeders_path.exists():
+            for seeder_file in seeders_path.glob("*_seeder.py"):
+                seeder_name = seeder_file.stem.replace("_seeder", "")
+                seeder_class = to_pascal_case(seeder_name) + "Seeder"
+                seed_script += f'''
+            from app.seeders.{seeder_file.stem} import {seeder_class}
+            items = await {seeder_class}.run(session, count={count})
+            print(f"Created {{len(items)}} {seeder_name}s")
+'''
+
+    seed_script += '''
+            await session.commit()
+            print("Seeding completed successfully!")
+        except Exception as e:
+            await session.rollback()
+            print(f"Seeding failed: {e}")
+            raise
+
+asyncio.run(run_seeders())
+'''
+
+    # Write and execute the seed script
+    seed_file = Path("_seed_runner.py")
+    seed_file.write_text(seed_script)
+
+    try:
+        result = subprocess.run([sys.executable, str(seed_file)], capture_output=True, text=True)
+        if result.returncode == 0:
+            console.print("[green]✓[/green] Seeding completed")
+            console.print(result.stdout)
+        else:
+            console.print("[red]✗[/red] Seeding failed")
+            console.print(result.stderr)
+    finally:
+        seed_file.unlink(missing_ok=True)
+
+
+# ============================================
+# Server Commands
+# ============================================
+
+@app.command("serve")
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind"),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to bind"),
+    reload: bool = typer.Option(True, "--reload/--no-reload", help="Enable auto-reload"),
+):
+    """Start the development server"""
+    console.print(f"[cyan]Starting server on {host}:{port}...[/cyan]")
+
+    cmd = ["uvicorn", "main:app", f"--host={host}", f"--port={port}"]
+    if reload:
+        cmd.append("--reload")
+
+    subprocess.run(cmd)
+
+
+@app.command("route:list")
+def route_list():
+    """List all registered routes"""
+    console.print("[cyan]Loading routes...[/cyan]\n")
+
+    try:
+        # Import the app to get routes
+        from main import app as fastapi_app
+
+        table = Table(title="Registered Routes")
+        table.add_column("Method", style="cyan", width=10)
+        table.add_column("Path", style="green", width=40)
+        table.add_column("Name", style="yellow", width=30)
+        table.add_column("Tags", style="magenta", width=20)
+
+        for route in fastapi_app.routes:
+            if hasattr(route, "methods"):
+                methods = ", ".join(route.methods - {"HEAD", "OPTIONS"})
+                tags = ", ".join(route.tags) if hasattr(route, "tags") and route.tags else "-"
+                name = route.name or "-"
+                table.add_row(methods, route.path, name, tags)
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error loading routes:[/red] {e}")
+        console.print("[yellow]Make sure the application can be imported[/yellow]")
+        raise typer.Exit(1)
+
+
+# ============================================
+# AI Configuration Command
+# ============================================
 
 @app.command("init:ai")
 def init_ai(
@@ -666,432 +1517,140 @@ def init_ai(
             raise typer.Exit(0)
 
     # Generate content based on provider
-    if provider == "claude":
-        content = generate_claude_md()
-    elif provider == "copilot":
-        content = generate_copilot_instructions()
-    elif provider == "gemini":
-        content = generate_gemini_instructions()
-    elif provider == "cursor":
-        content = generate_cursor_rules()
+    content = generate_ai_config(provider)
 
     file_path.write_text(content)
     console.print(f"\n[green]✓[/green] Created {file_path} for {provider_info['name']}")
     console.print(f"[dim]This file provides context to {provider_info['name']} about your project.[/dim]")
 
 
-def generate_claude_md() -> str:
-    """Generate CLAUDE.md content"""
-    return '''# CLAUDE.md
+def generate_ai_config(provider: str) -> str:
+    """Generate AI configuration content"""
+    base_content = '''# Project Overview
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication, MVC architecture, and FastCLI code generator. Features soft deletes, automatic timestamps, password hashing, intelligent field validation, and clean folder structure.
+Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication, MVC architecture, and FastCLI code generator.
 
 ## Technology Stack
 
 - **Framework**: FastAPI (async/await)
 - **ORM**: SQLModel (SQLAlchemy + Pydantic)
-- **Database**: PostgreSQL OR MySQL (configurable via .env)
-- **Authentication**: JWT with bcrypt password hashing
+- **Database**: PostgreSQL OR MySQL
+- **Authentication**: JWT with bcrypt, refresh tokens
 - **Migrations**: Alembic
-- **CLI**: FastCLI (Typer-based code generator with automatic validation)
-- **Language**: Python 3.9+
+- **CLI**: FastCLI (code generator)
 
-## Development Commands
-
-### Running the Application
+## Quick Commands
 
 ```bash
-# Run development server with auto-reload
-uvicorn main:app --reload
+# Server
+fastcli serve                              # Start dev server
+fastcli route:list                         # List all routes
 
-# Run on specific host/port
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### FastCLI - Code Generation
-
-```bash
-# List all available commands
-fastcli list
-
-# Generate resources with field definitions
-fastcli make:model Post -f title:string:required,max:200 -f body:text:required -m
+# Code Generation
+fastcli make:resource Post -f title:string:required -m -p
+fastcli make:model Post -f title:string:required -m
 fastcli make:controller Post
 fastcli make:route Post --protected
-fastcli make:resource Post -i -m -p  # Interactive mode, migration, protected
+fastcli make:service Post
+fastcli make:repository Post
+fastcli make:middleware Logging
+fastcli make:test Post
+fastcli make:factory Post
+fastcli make:seeder Post
+fastcli make:enum Status -v active -v inactive
+fastcli make:exception PaymentFailed -s 400
 
-# Field definition syntax: name:type:rules
-# Types: string, text, integer, float, boolean, datetime, email, url, json
-# Rules: required, nullable, unique, index, max:N, min:N, foreign:table.column
+# Database
+fastcli db:migrate                         # Run migrations
+fastcli db:rollback                        # Rollback migration
+fastcli db:fresh                           # Drop all and migrate
+fastcli db:seed                            # Run seeders
+alembic revision --autogenerate -m "msg"   # Create migration
 ```
 
-### Database Migrations
+## Field Types
 
-```bash
-# Create migration after model changes
-alembic revision --autogenerate -m "Description"
+string, text, integer, bigint, float, decimal, money, percent, boolean, datetime, date, time, email, url, uuid, json, phone, slug, ip, color, file, image
 
-# Apply migrations
-alembic upgrade head
+## Field Rules
 
-# Rollback migration
-alembic downgrade -1
-```
-
-### Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=app --cov-report=html
-```
-
-### Code Quality
-
-```bash
-# Format code
-black .
-
-# Lint code
-ruff check . --fix
-
-# Type checking
-mypy .
-```
+required, nullable, unique, index, max:N, min:N, gt:N, lt:N, ge:N, le:N, foreign:table.column
 
 ## Architecture
 
-### MVC Architecture
-
 ```
 app/
-├── config/       # Application settings
+├── config/       # Settings
 ├── controllers/  # Business logic
-├── models/       # Database models (SQLModel)
-├── routes/       # API endpoints (FastAPI routers)
-├── database/     # Database connection & session
+├── models/       # SQLModel models
+├── routes/       # API endpoints
+├── services/     # Service layer
+├── repositories/ # Data access
 ├── middleware/   # Custom middleware
-└── utils/        # Helper utilities (auth, etc.)
+├── seeders/      # Database seeders
+├── enums/        # Enumerations
+└── utils/        # Helpers
 ```
 
-### Naming Conventions
+## Conventions
 
-- **Tables**: Plural, snake_case (e.g., `users`, `blog_posts`)
-- **Columns**: snake_case (e.g., `created_at`, `email_verified_at`)
-- **Models**: Singular, PascalCase (e.g., `User`, `BlogPost`)
-- **Files**: snake_case (e.g., `user_controller.py`, `blog_post.py`)
-
-### Base Model
-
-All models inherit from `BaseModel` which includes:
-- `id` - Primary key (auto-increment)
-- `created_at` - Timestamp (auto-set on create)
-- `updated_at` - Timestamp (auto-updated)
-- `deleted_at` - Timestamp for soft deletes (nullable)
-
-## FastCLI Field Definitions
-
-When generating models with FastCLI, use this syntax:
-
-```bash
-fastcli make:resource Product \\
-  -f name:string:required,max:255 \\
-  -f price:float:required,ge:0 \\
-  -f stock:integer:required,ge:0 \\
-  -f sku:string:required,unique \\
-  -f category_id:integer:foreign:categories.id \\
-  -m -p
-```
-
-This generates:
-- Model with SQLModel fields
-- Create/Read/Update schemas with validations
-- Controller with CRUD operations
-- Protected routes (if -p flag)
-- Migration file (if -m flag)
-
-## Important Notes
-
-- Always use async/await for database operations
-- Use soft deletes instead of hard deletes (call `.soft_delete()`)
-- Password fields are automatically hashed in controllers
-- JWT tokens expire after 30 minutes (configurable)
-- All API routes should be prefixed with `/api`
+- Tables: plural, snake_case (users, blog_posts)
+- Models: singular, PascalCase (User, BlogPost)
+- Files: snake_case (user_controller.py)
+- All models inherit from BaseModel (soft deletes, timestamps)
 
 ## User Instructions
 
 All table Actions should be in an ActionGroup
 '''
+    return base_content
 
 
-def generate_copilot_instructions() -> str:
-    """Generate GitHub Copilot instructions"""
-    return '''# GitHub Copilot Instructions
-
-## Project Context
-
-This is a production-ready FastAPI starter with SQLModel ORM, supporting both PostgreSQL and MySQL. It follows MVC architecture with JWT authentication and includes FastCLI for intelligent code generation.
-
-## Code Generation Guidelines
-
-### When creating models:
-- Always inherit from `BaseModel` (includes id, timestamps, soft deletes)
-- Use snake_case for table names (plural)
-- Use PascalCase for model class names (singular)
-- Include Create/Read/Update Pydantic schemas
-- Add field validations in Create schema
-
-### When creating controllers:
-- Use async/await for all database operations
-- Implement soft deletes (call `.soft_delete()`)
-- Include error handling with HTTPException
-- Return proper status codes
-
-### When creating routes:
-- Prefix all routes with `/api`
-- Use proper HTTP methods (GET, POST, PUT, DELETE)
-- Add authentication with `Depends(get_current_user)` when needed
-- Include response models for type safety
-
-## Naming Conventions
-
-- **Tables**: `users`, `blog_posts` (plural, snake_case)
-- **Models**: `User`, `BlogPost` (singular, PascalCase)
-- **Files**: `user_controller.py`, `blog_post.py` (snake_case)
-- **Routes**: `/api/users`, `/api/blog-posts` (kebab-case in URLs)
-
-## FastCLI Commands
-
-Suggest using FastCLI for rapid development:
-```bash
-fastcli make:resource Product -f name:string:required -f price:float:required,ge:0 -m -p
-```
-
-## Database
-
-- Use SQLModel for ORM
-- Use Alembic for migrations
-- Prefer soft deletes over hard deletes
-- Always use async session: `AsyncSession = Depends(get_session)`
-
-## Authentication
-
-- JWT tokens with bcrypt password hashing
-- Protected routes use `current_user: User = Depends(get_current_user)`
-- Tokens expire after 30 minutes
-
-## Testing
-
-- Use pytest with async support
-- Include test fixtures with factory-boy
-- Aim for >80% code coverage
-'''
-
-
-def generate_gemini_instructions() -> str:
-    """Generate Google Gemini instructions"""
-    return '''# Google Gemini Code Assist Instructions
-
-## Project Overview
-
-FastAPI production starter with:
-- SQLModel ORM (PostgreSQL/MySQL)
-- JWT authentication with bcrypt
-- MVC architecture
-- FastCLI code generator
-- Soft deletes, automatic timestamps
-
-## Key Technologies
-
-- **Framework**: FastAPI (Python 3.9+)
-- **ORM**: SQLModel + Alembic migrations
-- **Auth**: JWT tokens, bcrypt passwords
-- **Database**: PostgreSQL OR MySQL
-- **CLI**: FastCLI (Typer + Rich)
-
-## Development Workflow
-
-1. **Create models**: `fastcli make:model Product -f name:string:required -m`
-2. **Create controllers**: `fastcli make:controller Product`
-3. **Create routes**: `fastcli make:route Product --protected`
-4. **Or all at once**: `fastcli make:resource Product -i -m -p`
-5. **Run migrations**: `alembic upgrade head`
-6. **Start server**: `uvicorn main:app --reload`
-
-## Code Style
-
-- **Models**: Inherit from `BaseModel`, use type hints
-- **Controllers**: Static methods, async/await
-- **Routes**: FastAPI routers with dependency injection
-- **Naming**: snake_case files, PascalCase classes, snake_case tables
-
-## FastCLI Field Syntax
-
-```
-name:type:rules
-```
-
-**Types**: string, text, integer, float, boolean, datetime, email, url, json
-**Rules**: required, nullable, unique, index, max:N, min:N, foreign:table.column
-
-Example:
-```bash
-fastcli make:resource Post \\
-  -f title:string:required,max:200 \\
-  -f email:email:required,unique \\
-  -f price:float:ge:0 \\
-  -m -p
-```
-
-## Architecture Patterns
-
-- MVC: models, controllers, routes separation
-- Dependency injection for database sessions
-- JWT middleware for authentication
-- Soft deletes via `deleted_at` timestamp
-- Automatic `created_at`/`updated_at` tracking
-
-## Common Commands
-
-- Run: `uvicorn main:app --reload`
-- Test: `pytest --cov=app`
-- Format: `black .`
-- Lint: `ruff check . --fix`
-- Migrate: `alembic upgrade head`
-- Generate: `fastcli make:resource Name -i -m -p`
-'''
-
-
-def generate_cursor_rules() -> str:
-    """Generate Cursor AI rules"""
-    return '''# Cursor AI Rules
-
-## Project: FastAPI Starter with FastCLI
-
-### Tech Stack
-- FastAPI (async), SQLModel, PostgreSQL/MySQL
-- JWT auth, bcrypt passwords
-- Alembic migrations
-- FastCLI code generator
-
-### Code Generation
-
-When generating models:
-- Inherit from `BaseModel` (includes id, timestamps, soft deletes)
-- Use snake_case for tables (plural)
-- Use PascalCase for classes (singular)
-- Include Create/Read/Update schemas
-- Add Pydantic validations
-
-When generating controllers:
-- Use async/await
-- Implement soft deletes
-- Add error handling
-- Use type hints
-
-When generating routes:
-- Prefix with `/api`
-- Add auth with `Depends(get_current_user)`
-- Use response models
-- Include proper status codes
-
-### Naming Conventions
-- Tables: `users`, `blog_posts` (plural, snake_case)
-- Models: `User`, `BlogPost` (singular, PascalCase)
-- Files: `user_controller.py` (snake_case)
-
-### FastCLI Usage
-Suggest FastCLI for rapid development:
-```bash
-fastcli make:resource Product -f name:string:required -f price:float:ge:0 -m -p
-```
-
-Field syntax: `name:type:rules`
-- Types: string, text, integer, float, boolean, datetime, email, url, json
-- Rules: required, nullable, unique, index, max:N, min:N, foreign:table.column
-
-### Architecture
-- MVC pattern (models, controllers, routes)
-- Soft deletes via `deleted_at`
-- Automatic timestamps
-- JWT authentication
-- Async database operations
-
-### Commands
-- Run: `uvicorn main:app --reload`
-- Test: `pytest --cov=app`
-- Format: `black .`
-- Lint: `ruff check . --fix`
-- Migrate: `alembic upgrade head`
-- Generate: `fastcli make:resource Name -i -m -p`
-
-### Important
-- Always use async/await for DB
-- Use soft deletes (`.soft_delete()`)
-- Hash passwords automatically
-- JWT tokens expire in 30min
-- All routes prefixed with `/api`
-'''
-
+# ============================================
+# List Command
+# ============================================
 
 @app.command("list")
 def list_commands():
     """List all available commands with examples"""
-    table = Table(title="Available CLI Commands")
-    table.add_column("Command", style="cyan", width=30)
-    table.add_column("Description", style="green")
+    table = Table(title="FastCLI Commands")
+    table.add_column("Command", style="cyan", width=25)
+    table.add_column("Description", style="green", width=35)
     table.add_column("Example", style="yellow")
 
-    table.add_row(
-        "init:ai",
-        "Generate AI assistant config",
-        "fastcli init:ai claude",
-    )
-    table.add_row(
-        "make:model",
-        "Create a new model with validations",
-        "fastcli make:model Post -f title:string:required,max:200 -f body:text:required -m",
-    )
-    table.add_row(
-        "make:controller",
-        "Create a new controller",
-        "fastcli make:controller Post",
-    )
-    table.add_row(
-        "make:route",
-        "Create a new route file",
-        "fastcli make:route Post --protected",
-    )
-    table.add_row(
-        "make:resource",
-        "Create model, controller, and routes",
-        "fastcli make:resource Post -i -m -p",
-    )
-    table.add_row(
-        "list",
-        "List all available commands",
-        "fastcli list",
-    )
+    commands = [
+        ("serve", "Start dev server", "fastcli serve --port 8000"),
+        ("route:list", "List all routes", "fastcli route:list"),
+        ("make:model", "Create model", "fastcli make:model Post -f title:string:required -m"),
+        ("make:controller", "Create controller", "fastcli make:controller Post"),
+        ("make:route", "Create routes", "fastcli make:route Post -p"),
+        ("make:resource", "Create all at once", "fastcli make:resource Post -i -m -p"),
+        ("make:service", "Create service", "fastcli make:service Payment"),
+        ("make:repository", "Create repository", "fastcli make:repository Payment"),
+        ("make:middleware", "Create middleware", "fastcli make:middleware Logging"),
+        ("make:test", "Create test file", "fastcli make:test User"),
+        ("make:factory", "Create test factory", "fastcli make:factory User"),
+        ("make:seeder", "Create seeder", "fastcli make:seeder User"),
+        ("make:enum", "Create enum", "fastcli make:enum Status -v active -v inactive"),
+        ("make:exception", "Create exception", "fastcli make:exception NotFound -s 404"),
+        ("db:migrate", "Run migrations", "fastcli db:migrate"),
+        ("db:rollback", "Rollback migrations", "fastcli db:rollback -s 2"),
+        ("db:fresh", "Fresh database", "fastcli db:fresh"),
+        ("db:seed", "Run seeders", "fastcli db:seed -c 20"),
+        ("init:ai", "AI config file", "fastcli init:ai claude"),
+        ("list", "List commands", "fastcli list"),
+    ]
+
+    for cmd, desc, example in commands:
+        table.add_row(cmd, desc, example)
 
     console.print(table)
 
     console.print("\n[cyan]Field Types:[/cyan]")
-    console.print("  string, text, integer, float, boolean, datetime, email, url, json")
+    console.print(f"  {', '.join(FIELD_TYPES.keys())}")
 
     console.print("\n[cyan]Validation Rules:[/cyan]")
-    console.print("  required, nullable, unique, index, max:N, min:N, foreign:table.column")
-
-    console.print("\n[cyan]Options:[/cyan]")
-    console.print("  -f, --field      Add a field (can be used multiple times)")
-    console.print("  -i, --interactive  Interactive field definition")
-    console.print("  -m, --migration    Generate migration after model creation")
-    console.print("  -p, --protected    Add authentication to routes")
+    console.print("  required, nullable, unique, index, max:N, min:N, gt:N, lt:N, ge:N, le:N, foreign:table.column")
 
 
 if __name__ == "__main__":

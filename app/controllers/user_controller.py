@@ -1,11 +1,11 @@
-from typing import List
-from datetime import datetime
+from typing import List, Optional
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from app.models.user import User, UserCreate, UserUpdate
 from app.utils.auth import get_password_hash
+from app.utils.pagination import paginate, PaginatedResult
 
 
 class UserController:
@@ -16,7 +16,26 @@ class UserController:
         """Get all non-deleted users"""
         query = select(User).where(User.deleted_at.is_(None)).offset(skip).limit(limit)
         result = await session.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_paginated(
+        session: AsyncSession,
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc"
+    ) -> PaginatedResult[User]:
+        """Get paginated users"""
+        query = select(User).where(User.deleted_at.is_(None))
+        return await paginate(
+            session=session,
+            query=query,
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
 
     @staticmethod
     async def get_by_id(session: AsyncSession, user_id: int) -> User:
@@ -27,6 +46,13 @@ class UserController:
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
+
+    @staticmethod
+    async def get_by_email(session: AsyncSession, email: str) -> Optional[User]:
+        """Get user by email"""
+        query = select(User).where(User.email == email, User.deleted_at.is_(None))
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create(session: AsyncSession, user_data: UserCreate) -> User:
@@ -45,7 +71,7 @@ class UserController:
             password=get_password_hash(user_data.password),
         )
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
         return user
 
@@ -67,9 +93,9 @@ class UserController:
         if user_data.password is not None:
             user.password = get_password_hash(user_data.password)
 
-        user.updated_at = datetime.utcnow()
+        user.touch()
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
         return user
 
@@ -79,7 +105,7 @@ class UserController:
         user = await UserController.get_by_id(session, user_id)
         user.soft_delete()
         session.add(user)
-        await session.commit()
+        await session.flush()
         return {"message": "User deleted successfully"}
 
     @staticmethod
@@ -93,6 +119,21 @@ class UserController:
 
         user.restore()
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
         return user
+
+    @staticmethod
+    async def count(session: AsyncSession) -> int:
+        """Count total users"""
+        from sqlalchemy import func
+        query = select(func.count(User.id)).where(User.deleted_at.is_(None))
+        result = await session.execute(query)
+        return result.scalar() or 0
+
+    @staticmethod
+    async def exists(session: AsyncSession, user_id: int) -> bool:
+        """Check if user exists"""
+        query = select(User.id).where(User.id == user_id, User.deleted_at.is_(None))
+        result = await session.execute(query)
+        return result.scalar_one_or_none() is not None

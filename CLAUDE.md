@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication, MVC architecture, and FastCLI code generator. Features soft deletes, automatic timestamps, password hashing, intelligent field validation, and clean folder structure.
+Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication with refresh tokens, MVC architecture, service/repository patterns, and FastCLI code generator. Features soft deletes, automatic timestamps, password hashing, rate limiting, structured logging, pagination, health checks, and comprehensive testing setup.
 
 ## Technology Stack
 
 - **Framework**: FastAPI (async/await)
 - **ORM**: SQLModel (SQLAlchemy + Pydantic)
 - **Database**: PostgreSQL OR MySQL (configurable via .env)
-- **Authentication**: JWT with bcrypt password hashing
+- **Authentication**: JWT with bcrypt password hashing + refresh tokens
 - **Migrations**: Alembic
 - **CLI**: FastCLI (Typer-based code generator with automatic validation)
+- **Testing**: pytest + pytest-asyncio + factory-boy
 - **Language**: Python 3.9+
 
 ## Development Commands
@@ -26,6 +27,10 @@ uvicorn main:app --reload
 
 # Run on specific host/port
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Using CLI
+python cli.py serve
+python cli.py serve --host 0.0.0.0 --port 8000
 ```
 
 ### FastCLI - Code Generation
@@ -33,33 +38,57 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```bash
 # List all available commands
 python cli.py list
-# Or after install: fastcli list
 
 # Generate resources with field definitions
-fastcli make:model Post -f title:string:required,max:200 -f body:text:required -m
-fastcli make:controller Post
-fastcli make:route Post --protected
-fastcli make:resource Post -i -m -p  # Interactive mode, migration, protected
+python cli.py make:model Post -f title:string:required,max:200 -f body:text:required -m
+python cli.py make:controller Post
+python cli.py make:route Post --protected
+python cli.py make:resource Post -i -m -p  # Interactive mode, migration, protected
 
 # Field definition syntax: name:type:rules
 # Types: string, text, integer, float, boolean, datetime, email, url, json
+#        uuid, decimal, money, percent, date, time, phone, slug, ip, color, file, image
 # Rules: required, nullable, unique, index, max:N, min:N, foreign:table.column
+
+# Additional generators
+python cli.py make:service Post         # Create service class
+python cli.py make:repository Post      # Create repository class
+python cli.py make:middleware Auth      # Create middleware
+python cli.py make:seeder Post          # Create database seeder
+python cli.py make:test Post            # Create test file
+python cli.py make:factory Post         # Create test factory
+python cli.py make:enum Status          # Create enum
+python cli.py make:exception NotFound   # Create custom exception
 ```
 
-### Database Migrations
+### Database Commands
 
 ```bash
-# Create migration after model changes
+# Migrations (via CLI)
+python cli.py db:migrate -m "Create posts table"  # Create migration
+python cli.py db:rollback                         # Rollback one migration
+python cli.py db:rollback --steps 3               # Rollback multiple
+python cli.py db:fresh                            # Drop all & re-migrate
+
+# Migrations (via Alembic directly)
 alembic revision --autogenerate -m "Description"
-
-# Apply migrations
 alembic upgrade head
-
-# Rollback migration
 alembic downgrade -1
-
-# View migration history
 alembic history
+
+# Seeding
+python cli.py db:seed                    # Run all seeders
+python cli.py db:seed --seeder User      # Run specific seeder
+python cli.py db:seed --count 50         # Create 50 records
+```
+
+### Route Management
+
+```bash
+# List all routes
+python cli.py route:list
+python cli.py route:list --tag Users      # Filter by tag
+python cli.py route:list --method POST    # Filter by method
 ```
 
 ### Testing
@@ -73,6 +102,9 @@ pytest tests/test_users.py
 
 # Run with coverage
 pytest --cov=app --cov-report=html
+
+# Run specific test
+pytest tests/test_auth.py::test_login_success
 ```
 
 ### Code Quality
@@ -93,17 +125,29 @@ mypy .
 
 ## Architecture
 
-### MVC Architecture
+### Project Structure
 
 ```
 app/
-├── config/       # Application settings (settings.py)
-├── controllers/  # Business logic (UserController, AuthController)
-├── database/     # DB connection and session management
-├── models/       # SQLModel models (BaseModel, User)
-├── routes/       # API route definitions (user_routes, auth_routes)
-├── middleware/   # Custom middleware
-└── utils/        # Utilities (auth.py for JWT & password hashing)
+├── config/           # Application settings (settings.py)
+├── controllers/      # Business logic (UserController, AuthController)
+├── database/         # DB connection and session management
+├── enums/            # Enum definitions
+├── middleware/       # Custom middleware (request_id, timing, rate_limit)
+├── models/           # SQLModel models (BaseModel, User)
+├── repositories/     # Data access layer (BaseRepository)
+├── routes/           # API route definitions
+├── seeders/          # Database seeders
+├── services/         # Business logic services (BaseService)
+└── utils/            # Utilities (auth, logger, pagination, exceptions, responses)
+
+tests/
+├── conftest.py       # Pytest fixtures
+├── factories.py      # Test data factories
+├── test_auth.py      # Auth endpoint tests
+├── test_health.py    # Health check tests
+├── test_users.py     # User endpoint tests
+└── test_root.py      # Root endpoint tests
 ```
 
 ### Key Architectural Patterns
@@ -111,13 +155,24 @@ app/
 1. **Base Model Pattern**: All models inherit from `BaseModel` which provides:
    - `id`, `created_at`, `updated_at`, `deleted_at`
    - Soft delete methods: `soft_delete()`, `restore()`, `is_deleted`
+   - `touch()` method to update timestamps
 
 2. **Controller Pattern**: Business logic separated into controllers
    - Controllers handle CRUD operations (e.g., `UserController`, `AuthController`)
    - Database queries managed in controllers
    - Routes call controller methods
 
-3. **Dependency Injection**: Use `get_session()` for database sessions in routes
+3. **Service/Repository Pattern**: Optional layered architecture
+   - `BaseRepository` - Generic CRUD operations with soft delete support
+   - `BaseService` - Business logic with hooks (before_create, after_update, etc.)
+   - Use for complex domains requiring separation of concerns
+
+4. **Middleware Stack**:
+   - `RequestIDMiddleware` - Adds X-Request-ID to requests/responses
+   - `TimingMiddleware` - Adds X-Response-Time header, logs slow requests
+   - `RateLimitMiddleware` - Sliding window rate limiting
+
+5. **Dependency Injection**: Use `get_session()` for database sessions in routes
 
 ### Naming Conventions
 
@@ -133,55 +188,61 @@ app/
 - Use `user.soft_delete()` instead of actual deletion
 - Restore with `user.restore()`
 
-## Creating New Features
+## API Features
 
-### Adding a New Model
+### Standard Response Format
 
-1. Create model file in `app/models/new_model.py`:
 ```python
-from sqlmodel import Field
-from app.models.base import BaseModel
+from app.utils.responses import success_response, error_response, paginated_response
 
-class Post(BaseModel, table=True):
-    __tablename__ = "posts"
-    title: str = Field(nullable=False, max_length=255)
-    content: str = Field(nullable=False)
-    user_id: int = Field(foreign_key="users.id")
+# Success response
+return success_response(data=user, message="User created")
+# {"success": true, "data": {...}, "message": "User created"}
+
+# Error response
+return error_response(message="Not found", code="NOT_FOUND", status_code=404)
+# {"success": false, "error": {"message": "Not found", "code": "NOT_FOUND"}}
+
+# Paginated response
+return paginated_response(items=users, page=1, per_page=20, total=100)
 ```
 
-2. Import in `alembic/env.py`:
+### Pagination
+
 ```python
-from app.models.new_model import Post  # noqa
+from app.utils.pagination import paginate, PaginationParams
+
+# In route
+params = PaginationParams(page=1, per_page=20)
+result = await paginate(session, select(User), params)
+# result.items, result.total, result.pages, result.has_next, result.has_prev
 ```
 
-3. Create migration:
-```bash
-alembic revision --autogenerate -m "Create posts table"
-alembic upgrade head
-```
+### Custom Exceptions
 
-### Adding a New Controller
-
-Create in `app/controllers/`:
 ```python
-from app.models.your_model import YourModel
+from app.utils.exceptions import (
+    NotFoundException,
+    BadRequestException,
+    UnauthorizedException,
+    ForbiddenException,
+    ConflictException,
+    ValidationException,
+    RateLimitException
+)
 
-class YourController:
-    @staticmethod
-    async def get_all(session: AsyncSession):
-        query = select(YourModel).where(YourModel.deleted_at.is_(None))
-        result = await session.execute(query)
-        return result.scalars().all()
+# Raise exceptions - automatically handled by exception handlers
+raise NotFoundException("User not found")
+raise BadRequestException("Invalid email format")
+raise ConflictException("Email already exists")
 ```
 
-### Adding Routes
+### Health Checks
 
-Create in `app/routes/` and register in `main.py`:
-```python
-# In main.py
-from app.routes.your_routes import router as your_router
-app.include_router(your_router, prefix="/api/your-resource", tags=["YourResource"])
-```
+- `GET /health/` - Basic health check
+- `GET /health/ready` - Readiness check (includes DB connectivity)
+- `GET /health/live` - Liveness probe
+- `GET /health/info` - Service information
 
 ## Database Connection
 
@@ -192,14 +253,33 @@ app.include_router(your_router, prefix="/api/your-resource", tags=["YourResource
   - PostgreSQL: `DATABASE_URL=postgresql://user:pass@localhost:5432/db`
   - MySQL: `DATABASE_URL=mysql://user:pass@localhost:3306/db`
 - Session management via dependency injection: `session: AsyncSession = Depends(get_session)`
+- Auto-commit on success, auto-rollback on exception
 
 ## Authentication
 
-### JWT Authentication
-- JWT tokens for authentication (`app/utils/auth.py`)
-- Password hashing with bcrypt (`passlib`)
-- Auth endpoints: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
-- Protect routes with: `current_user: User = Depends(get_current_active_user)`
+### JWT Authentication with Refresh Tokens
+- Access tokens (short-lived, default 30 minutes)
+- Refresh tokens (long-lived, default 7 days)
+- Token endpoints:
+  - `POST /api/auth/register` - Create new user
+  - `POST /api/auth/login` - Login (form data)
+  - `POST /api/auth/login/json` - Login (JSON body)
+  - `POST /api/auth/refresh` - Refresh access token
+  - `GET /api/auth/me` - Get current user
+  - `POST /api/auth/change-password` - Change password
+  - `POST /api/auth/forgot-password` - Request password reset
+  - `POST /api/auth/reset-password` - Reset password with token
+  - `POST /api/auth/verify-email` - Verify email
+  - `POST /api/auth/logout` - Logout
+
+### Protect Routes
+```python
+from app.utils.auth import get_current_active_user
+
+@router.get("/protected")
+async def protected_route(current_user: User = Depends(get_current_active_user)):
+    return {"user": current_user}
+```
 
 ### Password Hashing
 ```python
@@ -212,29 +292,128 @@ hashed = get_password_hash("password123")
 is_valid = verify_password("password123", hashed)
 ```
 
+## Middleware
+
+### Rate Limiting
+Enabled via `RATE_LIMIT_ENABLED=true` in `.env`:
+```env
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+```
+
+### Request ID
+Automatically adds `X-Request-ID` header to all requests/responses for tracing.
+
+### Timing
+Adds `X-Response-Time` header and logs requests taking longer than 1 second.
+
+## Logging
+
+Structured logging with JSON or text format:
+```python
+from app.utils.logger import logger
+
+logger.info("User created", extra={"user_id": user.id})
+logger.error("Database error", extra={"error": str(e)})
+```
+
+Configure in `.env`:
+```env
+LOG_LEVEL=INFO
+LOG_FORMAT=json  # or "text"
+```
+
 ## CLI Tool
 
-The `cli.py` provides powerful code generation:
+The `cli.py` provides comprehensive code generation and management:
 
 ```bash
-# Use the CLI directly
-python cli.py make:model BlogPost --migration
-python cli.py make:controller BlogPost
-python cli.py make:route BlogPost
-python cli.py make:resource BlogPost -m  # Creates all at once
+# List all commands
+python cli.py list
 
-# After install (pip install -e .), use 'artisan' command
-fastcli make:resource Post -m
+# Generate complete resource
+python cli.py make:resource Post -m -p
+
+# Database operations
+python cli.py db:migrate -m "Add posts"
+python cli.py db:seed --seeder User
+
+# Server management
+python cli.py serve --reload
+python cli.py route:list
+```
+
+## Testing
+
+### Test Structure
+- `tests/conftest.py` - Fixtures (db_session, client, test_user, auth_headers)
+- `tests/factories.py` - Test data factories
+- Test files organized by feature (test_auth.py, test_users.py, etc.)
+
+### Using Fixtures
+```python
+import pytest
+
+@pytest.mark.asyncio
+async def test_get_user(client, test_user, auth_headers):
+    response = await client.get(f"/api/users/{test_user.id}", headers=auth_headers)
+    assert response.status_code == 200
+```
+
+### Using Factories
+```python
+from tests.factories import UserFactory
+
+user = UserFactory.build(name="Test User")
+verified_user = UserFactory.build_verified()
+users = UserFactory.build_batch(5)
 ```
 
 ## Important Notes
 
 - Always use `async`/`await` for database operations
 - Filter soft deletes in queries: `where(Model.deleted_at.is_(None))`
-- Update `updated_at` manually when modifying records: `model.updated_at = datetime.utcnow()`
+- Use `model.touch()` to update timestamps
 - Import new models in `alembic/env.py` for migrations to detect them
 - Passwords are automatically hashed in `AuthController` and `UserController`
 - Use CLI to generate resources (faster than manual creation)
+- Run tests with SQLite for speed: `pytest` (uses in-memory SQLite)
+
+## Environment Variables
+
+Key configuration options in `.env`:
+```env
+# Application
+APP_NAME=FastAPI App
+ENVIRONMENT=development
+DEBUG=true
+
+# Database
+DB_DRIVER=postgresql
+DATABASE_URL=postgresql://user:pass@localhost:5432/db
+
+# Authentication
+SECRET_KEY=your-secret-key
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+
+# Pagination
+DEFAULT_PAGE_SIZE=20
+MAX_PAGE_SIZE=100
+
+# CORS
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+```
 
 ## User-Specific Instructions
 

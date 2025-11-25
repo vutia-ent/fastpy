@@ -48,6 +48,7 @@ pytest-cov==6.0.0
 faker==33.1.0  # Generate fake data for tests
 httpx==0.28.0  # Already included above for testing
 factory-boy==3.3.1  # Test fixtures
+aiosqlite==0.20.0  # SQLite async driver for tests
 
 # Code Quality
 black==24.10.0
