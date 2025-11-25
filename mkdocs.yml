@@ -1,0 +1,135 @@
+site_name: FastCLI Documentation
+site_description: A powerful CLI tool for FastAPI code generation
+site_author: VE.KE
+site_url: https://veke.dev/docs
+
+repo_name: VE.KE/api
+repo_url: https://github.com/veke/api
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: veke
+      repo: api
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/veke/api
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/veke
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - CLI Commands:
+    - Overview: commands/overview.md
+    - Server Commands: commands/server.md
+    - Database Commands: commands/database.md
+    - Make Commands: commands/make.md
+    - AI Integration: commands/ai.md
+  - Field Types:
+    - Overview: fields/overview.md
+    - Basic Types: fields/basic.md
+    - Advanced Types: fields/advanced.md
+    - Validation Rules: fields/validation.md
+  - Architecture:
+    - Project Structure: architecture/structure.md
+    - Patterns: architecture/patterns.md
+    - Middleware: architecture/middleware.md
+  - API Reference:
+    - Authentication: api/authentication.md
+    - Responses: api/responses.md
+    - Exceptions: api/exceptions.md
+    - Pagination: api/pagination.md
+  - Testing:
+    - Setup: testing/setup.md
+    - Fixtures: testing/fixtures.md
+    - Factories: testing/factories.md
+  - Deployment:
+    - Production: deployment/production.md
+    - Docker: deployment/docker.md
+  - Examples:
+    - Blog System: examples/blog.md
+    - E-commerce: examples/ecommerce.md
+    - API Service: examples/api-service.md
