@@ -21,12 +21,37 @@ export default defineConfig({
         { icon: 'x.com', label: 'Twitter', href: 'https://twitter.com/vutia' },
       ],
       head: [
+        // Google Fonts - Inter
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        },
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: true },
+        },
+        {
+          tag: 'link',
+          attrs: {
+            rel: 'stylesheet',
+            href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap',
+          },
+        },
+        // Open Graph
         {
           tag: 'meta',
           attrs: { property: 'og:image', content: 'https://vutia-ent.github.io/fastpy/og-image.png' },
         },
+        {
+          tag: 'meta',
+          attrs: { property: 'og:type', content: 'website' },
+        },
       ],
       customCss: ['./src/styles/custom.css'],
+      // Improved color theme
+      components: {
+        // You can override components here if needed
+      },
       sidebar: [
         {
           label: 'Getting Started',
@@ -101,6 +126,9 @@ export default defineConfig({
         baseUrl: 'https://github.com/vutia-ent/fastpy/edit/main/docs/',
       },
       lastUpdated: true,
+      tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
+      pagination: true,
+      favicon: '/favicon.svg',
     }),
   ],
   vite: {
