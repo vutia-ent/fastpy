@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# VE.KE API Setup Script
+# Fastpy Setup Script
 # This script automates the setup process for the FastAPI starter template
 
 set -e  # Exit on any error
@@ -151,9 +151,9 @@ trap cleanup_on_error ERR
 # Main setup function
 main() {
     # Initialize log file
-    echo "=== VE.KE API Setup Log - $(date) ===" > "$LOG_FILE"
+    echo "=== Fastpy Setup Log - $(date) ===" > "$LOG_FILE"
 
-    print_header "VE.KE API Setup"
+    print_header "Fastpy Setup"
     print_info "Log file: $LOG_FILE"
 
     # Check if running in project directory
@@ -213,10 +213,56 @@ main() {
     print_step "Step 4: Installing dependencies"
     print_info "This may take a few minutes..."
 
+    # Handle platform-specific dependencies
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        print_info "Detected macOS - checking for MySQL dependencies..."
+
+        # Check if MySQL is needed and install dependencies
+        if command_exists brew; then
+            # Check if mysql is installed via Homebrew
+            if ! brew list mysql &>/dev/null && ! brew list mysql-client &>/dev/null; then
+                print_info "Installing MySQL client via Homebrew (required for mysqlclient)..."
+                if brew install mysql-client >> "$LOG_FILE" 2>&1; then
+                    print_success "MySQL client installed"
+                else
+                    print_warning "Could not install mysql-client. MySQL support may not work."
+                fi
+            fi
+
+            # Set MySQL path for mysqlclient compilation
+            if [ -d "/usr/local/opt/mysql-client/bin" ]; then
+                export PATH="/usr/local/opt/mysql-client/bin:$PATH"
+                export LDFLAGS="-L/usr/local/opt/mysql-client/lib"
+                export CPPFLAGS="-I/usr/local/opt/mysql-client/include"
+                print_info "MySQL client path configured"
+            elif [ -d "/opt/homebrew/opt/mysql-client/bin" ]; then
+                # Apple Silicon path
+                export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+                export LDFLAGS="-L/opt/homebrew/opt/mysql-client/lib"
+                export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
+                print_info "MySQL client path configured (Apple Silicon)"
+            fi
+        else
+            print_warning "Homebrew not found. If you need MySQL support, install it manually."
+        fi
+    fi
+
+    # Install known problematic packages with specific versions first
+    print_info "Installing critical dependencies with pinned versions..."
+    if pip install greenlet==3.2.4 bcrypt==4.2.1 passlib==1.7.4 >> "$LOG_FILE" 2>&1; then
+        print_success "Critical dependencies installed (greenlet, bcrypt, passlib)"
+    else
+        print_warning "Some critical dependencies may have issues. Check $LOG_FILE"
+    fi
+
     if pip install -r requirements.txt >> "$LOG_FILE" 2>&1; then
         print_success "Core dependencies installed"
     else
         print_error "Failed to install dependencies. Check $LOG_FILE for details."
+        print_info "Common fixes:"
+        print_info "  - mysqlclient: brew install mysql-client"
+        print_info "  - bcrypt: pip install bcrypt==4.2.1 passlib==1.7.4"
+        print_info "  - greenlet: pip install greenlet==3.2.4"
         exit 1
     fi
 
@@ -262,7 +308,7 @@ main() {
 
         if [ "$db_choice" = "1" ]; then
             DB_DRIVER="postgresql"
-            DB_NAME="veke_db"
+            DB_NAME="fastpy_db"
             DEFAULT_URL="postgresql://postgres:password@localhost:5432/$DB_NAME"
             print_info "PostgreSQL selected"
 
@@ -283,7 +329,7 @@ main() {
 
         elif [ "$db_choice" = "2" ]; then
             DB_DRIVER="mysql"
-            DB_NAME="veke_db"
+            DB_NAME="fastpy_db"
             DEFAULT_URL="mysql://root:password@localhost:3306/$DB_NAME"
             print_info "MySQL selected"
 
@@ -308,7 +354,7 @@ main() {
         else
             print_warning "Invalid choice. Defaulting to PostgreSQL."
             DB_DRIVER="postgresql"
-            DB_NAME="veke_db"
+            DB_NAME="fastpy_db"
             DEFAULT_URL="postgresql://postgres:password@localhost:5432/$DB_NAME"
         fi
 
@@ -435,7 +481,7 @@ main() {
     # Setup complete
     print_header "Setup Complete!"
     echo ""
-    echo -e "${GREEN}✓${NC} Your VE.KE API is ready to use!"
+    echo -e "${GREEN}✓${NC} Your Fastpy project is ready to use!"
     echo ""
     echo -e "${CYAN}Next Steps:${NC}"
     echo "  1. Review .env file and update database credentials if needed"
