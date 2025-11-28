@@ -1,4 +1,4 @@
-# VE.KE API
+# Fastpy
 
 A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL support, JWT authentication with refresh tokens, MVC architecture, service/repository patterns, and comprehensive tooling. Features **FastCLI** - an intelligent code generator with 20+ commands, automatic validation, and AI assistant integration.
 
@@ -74,7 +74,7 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 
 ```bash
 # Clone and setup
-git clone <your-repo-url> && cd api
+git clone https://github.com/vutia-ent/fastpy.git && cd fastpy
 ./setup.sh
 
 # Generate a resource with FastCLI
@@ -539,14 +539,14 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/veke_db
+      - DATABASE_URL=postgresql://postgres:password@db:5432/fastpy_db
     depends_on:
       - db
 
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=veke_db
+      - POSTGRES_DB=fastpy_db
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres_data:/var/lib/postgresql/data

@@ -7,9 +7,9 @@ class Settings(BaseSettings):
     """Application settings and environment variables"""
 
     # Application
-    app_name: str = "VE.KE API"
+    app_name: str = "Fastpy"
     app_version: str = "0.1.0"
-    app_description: str = "Production-ready FastAPI starter"
+    app_description: str = "Production-ready FastAPI starter with FastCLI"
     debug: bool = True
     environment: Literal["development", "staging", "production"] = "development"
 
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Database
     db_driver: Literal["postgresql", "mysql"] = "postgresql"
-    database_url: str = "postgresql://postgres:password@localhost:5432/veke_db"
+    database_url: str = "postgresql://postgres:password@localhost:5432/fastpy_db"
     db_pool_size: int = 5
     db_max_overflow: int = 10
 

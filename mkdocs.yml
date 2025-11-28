@@ -1,10 +1,10 @@
-site_name: FastCLI Documentation
-site_description: A powerful CLI tool for FastAPI code generation
-site_author: VE.KE
-site_url: https://veke.dev/docs
+site_name: Fastpy Documentation
+site_description: Production-ready FastAPI starter with FastCLI code generator
+site_author: Vutia
+site_url: https://vutia-ent.github.io/fastpy
 
-repo_name: VE.KE/api
-repo_url: https://github.com/veke/api
+repo_name: vutia-ent/fastpy
+repo_url: https://github.com/vutia-ent/fastpy
 
 theme:
   name: material
@@ -70,8 +70,8 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.magiclink:
       repo_url_shorthand: true
-      user: veke
-      repo: api
+      user: vutia-ent
+      repo: fastpy
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences:
@@ -88,9 +88,9 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/veke/api
+      link: https://github.com/vutia-ent/fastpy
     - icon: fontawesome/brands/twitter
-      link: https://twitter.com/veke
+      link: https://twitter.com/vutia
   generator: false
 
 extra_css:

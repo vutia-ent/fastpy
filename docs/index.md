@@ -98,8 +98,8 @@ avatar:image:nullable
 
 ```bash
 # Clone the repository
-git clone https://github.com/veke/api.git
-cd api
+git clone https://github.com/vutia-ent/fastpy.git
+cd fastpy
 
 # Run setup
 ./setup.sh

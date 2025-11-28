@@ -385,7 +385,7 @@ users = UserFactory.build_batch(5)
 Key configuration options in `.env`:
 ```env
 # Application
-APP_NAME=FastAPI App
+APP_NAME=Fastpy
 ENVIRONMENT=development
 DEBUG=true
 
