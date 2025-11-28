@@ -1,0 +1,65 @@
+---
+title: Fastpy
+description: Production-ready FastAPI starter with FastCLI code generator
+template: splash
+hero:
+  tagline: Build production-ready FastAPI applications in minutes, not hours. Featuring FastCLI - an intelligent code generator with 20+ commands.
+  image:
+    file: ../../assets/logo-light.svg
+  actions:
+    - text: Get Started
+      link: /fastpy/getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/vutia-ent/fastpy
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why Fastpy?
+
+<CardGrid stagger>
+  <Card title="20+ CLI Commands" icon="terminal">
+    Generate models, controllers, routes, services, repositories, middleware, tests, factories, and more with a single command.
+  </Card>
+  <Card title="15+ Field Types" icon="list-format">
+    String, text, integer, email, URL, JSON, UUID, money, date, phone, slug, and more - all with automatic validation.
+  </Card>
+  <Card title="Production Ready" icon="rocket">
+    JWT auth with refresh tokens, rate limiting, structured logging, health checks, and comprehensive testing setup out of the box.
+  </Card>
+  <Card title="Multi-Database Support" icon="document">
+    PostgreSQL or MySQL with async support, connection pooling, and Alembic migrations.
+  </Card>
+</CardGrid>
+
+## Quick Example
+
+```bash
+# Generate a complete resource with one command
+python cli.py make:resource Post \
+  -f title:string:required,max:200 \
+  -f body:text:required \
+  -f author_id:integer:foreign:users.id \
+  -m -p
+```
+
+This single command generates:
+- SQLModel with proper field types and constraints
+- Pydantic schemas with automatic validations
+- Controller with full CRUD operations
+- Protected routes with authentication
+- Alembic migration files
+
+## Features at a Glance
+
+| Category | Features |
+|----------|----------|
+| **Framework** | FastAPI with async/await support |
+| **ORM** | SQLModel (SQLAlchemy + Pydantic) |
+| **Auth** | JWT with access + refresh tokens, bcrypt hashing |
+| **Database** | PostgreSQL, MySQL with Alembic migrations |
+| **Testing** | pytest, fixtures, factories |
+| **CLI** | FastCLI with 20+ code generation commands |
