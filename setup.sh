@@ -209,60 +209,127 @@ main() {
         print_warning "Could not upgrade pip, continuing anyway..."
     fi
 
+    # Database selection (ask early to install only needed dependencies)
+    print_step "Step 4: Select database"
+    echo ""
+    echo "Which database will you use?"
+    echo "  1) PostgreSQL (recommended)"
+    echo "  2) MySQL"
+    echo "  3) SQLite (for development/testing only)"
+    echo ""
+    read -p "Enter your choice (1-3): " db_choice
+
+    case $db_choice in
+        1)
+            DB_DRIVER="postgresql"
+            DB_PACKAGE="psycopg2-binary"
+            print_success "PostgreSQL selected"
+            ;;
+        2)
+            DB_DRIVER="mysql"
+            DB_PACKAGE="mysqlclient pymysql"
+            print_success "MySQL selected"
+            ;;
+        3)
+            DB_DRIVER="sqlite"
+            DB_PACKAGE="aiosqlite"
+            print_success "SQLite selected"
+            ;;
+        *)
+            print_warning "Invalid choice. Defaulting to PostgreSQL."
+            DB_DRIVER="postgresql"
+            DB_PACKAGE="psycopg2-binary"
+            ;;
+    esac
+
     # Install dependencies
-    print_step "Step 4: Installing dependencies"
+    print_step "Step 5: Installing dependencies"
     print_info "This may take a few minutes..."
 
-    # Handle platform-specific dependencies
+    # Handle platform-specific dependencies for macOS
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        print_info "Detected macOS - checking for MySQL dependencies..."
-
-        # Check if MySQL is needed and install dependencies
         if command_exists brew; then
-            # Check if mysql is installed via Homebrew
-            if ! brew list mysql &>/dev/null && ! brew list mysql-client &>/dev/null; then
-                print_info "Installing MySQL client via Homebrew (required for mysqlclient)..."
-                if brew install mysql-client >> "$LOG_FILE" 2>&1; then
-                    print_success "MySQL client installed"
-                else
-                    print_warning "Could not install mysql-client. MySQL support may not work."
+            # Install database-specific dependencies
+            if [ "$DB_DRIVER" = "postgresql" ]; then
+                if ! command_exists pg_config; then
+                    print_info "Installing PostgreSQL client via Homebrew..."
+                    if brew install libpq >> "$LOG_FILE" 2>&1; then
+                        print_success "PostgreSQL client installed"
+                    else
+                        print_warning "Could not install libpq automatically."
+                        print_info "Run manually: brew install libpq"
+                    fi
+                fi
+                # Set paths for psycopg2 compilation
+                if [ -d "/opt/homebrew/opt/libpq/bin" ]; then
+                    export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+                    export LDFLAGS="-L/opt/homebrew/opt/libpq/lib"
+                    export CPPFLAGS="-I/opt/homebrew/opt/libpq/include"
+                elif [ -d "/usr/local/opt/libpq/bin" ]; then
+                    export PATH="/usr/local/opt/libpq/bin:$PATH"
+                    export LDFLAGS="-L/usr/local/opt/libpq/lib"
+                    export CPPFLAGS="-I/usr/local/opt/libpq/include"
+                fi
+            elif [ "$DB_DRIVER" = "mysql" ]; then
+                if ! brew list mysql-client &>/dev/null && ! brew list mysql &>/dev/null; then
+                    print_info "Installing MySQL client via Homebrew..."
+                    if brew install mysql-client >> "$LOG_FILE" 2>&1; then
+                        print_success "MySQL client installed"
+                    else
+                        print_warning "Could not install mysql-client automatically."
+                        print_info "Run manually: brew install mysql-client"
+                    fi
+                fi
+                # Set paths for mysqlclient compilation
+                if [ -d "/opt/homebrew/opt/mysql-client/bin" ]; then
+                    export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+                    export LDFLAGS="-L/opt/homebrew/opt/mysql-client/lib"
+                    export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
+                elif [ -d "/usr/local/opt/mysql-client/bin" ]; then
+                    export PATH="/usr/local/opt/mysql-client/bin:$PATH"
+                    export LDFLAGS="-L/usr/local/opt/mysql-client/lib"
+                    export CPPFLAGS="-I/usr/local/opt/mysql-client/include"
                 fi
             fi
-
-            # Set MySQL path for mysqlclient compilation
-            if [ -d "/usr/local/opt/mysql-client/bin" ]; then
-                export PATH="/usr/local/opt/mysql-client/bin:$PATH"
-                export LDFLAGS="-L/usr/local/opt/mysql-client/lib"
-                export CPPFLAGS="-I/usr/local/opt/mysql-client/include"
-                print_info "MySQL client path configured"
-            elif [ -d "/opt/homebrew/opt/mysql-client/bin" ]; then
-                # Apple Silicon path
-                export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
-                export LDFLAGS="-L/opt/homebrew/opt/mysql-client/lib"
-                export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
-                print_info "MySQL client path configured (Apple Silicon)"
-            fi
+            # SQLite needs no additional dependencies on macOS
         else
-            print_warning "Homebrew not found. If you need MySQL support, install it manually."
+            if [ "$DB_DRIVER" != "sqlite" ]; then
+                print_warning "Homebrew not found. You may need to install database dependencies manually."
+                print_info "Install Homebrew: https://brew.sh"
+            fi
         fi
     fi
 
-    # Install known problematic packages with specific versions first
-    print_info "Installing critical dependencies with pinned versions..."
-    if pip install greenlet==3.2.4 bcrypt==4.2.1 passlib==1.7.4 >> "$LOG_FILE" 2>&1; then
-        print_success "Critical dependencies installed (greenlet, bcrypt, passlib)"
+    # Install core dependencies (without database drivers)
+    print_info "Installing core dependencies..."
+    if pip install --default-timeout=120 greenlet bcrypt passlib >> "$LOG_FILE" 2>&1; then
+        print_success "Critical dependencies installed"
     else
         print_warning "Some critical dependencies may have issues. Check $LOG_FILE"
     fi
 
-    if pip install -r requirements.txt >> "$LOG_FILE" 2>&1; then
+    # Create a temporary requirements file without database-specific packages
+    print_info "Installing main dependencies..."
+    grep -v "psycopg2\|mysqlclient\|pymysql\|aiosqlite" requirements.txt > /tmp/requirements_core.txt 2>/dev/null || cp requirements.txt /tmp/requirements_core.txt
+
+    if pip install --default-timeout=120 -r /tmp/requirements_core.txt >> "$LOG_FILE" 2>&1; then
         print_success "Core dependencies installed"
     else
-        print_error "Failed to install dependencies. Check $LOG_FILE for details."
-        print_info "Common fixes:"
-        print_info "  - mysqlclient: brew install mysql-client"
-        print_info "  - bcrypt: pip install bcrypt==4.2.1 passlib==1.7.4"
-        print_info "  - greenlet: pip install greenlet==3.2.4"
+        print_error "Failed to install core dependencies. Check $LOG_FILE for details."
+        exit 1
+    fi
+
+    # Install selected database driver
+    print_info "Installing $DB_DRIVER database driver..."
+    if pip install --default-timeout=120 $DB_PACKAGE >> "$LOG_FILE" 2>&1; then
+        print_success "$DB_DRIVER driver installed ($DB_PACKAGE)"
+    else
+        print_error "Failed to install $DB_DRIVER driver."
+        if [ "$DB_DRIVER" = "postgresql" ]; then
+            print_info "Fix: brew install libpq && pip install psycopg2-binary"
+        elif [ "$DB_DRIVER" = "mysql" ]; then
+            print_info "Fix: brew install mysql-client && pip install mysqlclient"
+        fi
         exit 1
     fi
 
@@ -275,7 +342,7 @@ main() {
     fi
 
     # Setup .env file
-    print_step "Step 5: Configuring environment"
+    print_step "Step 6: Configuring environment"
     if [ -f ".env" ]; then
         print_warning ".env file already exists."
         read -p "Do you want to reconfigure it? (y/n): " reconfig_env
@@ -298,23 +365,17 @@ main() {
     fi
 
     if [ "$SKIP_ENV_CONFIG" != "true" ]; then
-        # Database configuration
+        # Database configuration (using selection from Step 4)
         print_header "Database Configuration"
-        echo "Which database would you like to use?"
-        echo "1) PostgreSQL (recommended for production)"
-        echo "2) MySQL"
-        echo "3) Skip database configuration"
-        read -p "Enter your choice (1-3): " db_choice
 
-        if [ "$db_choice" = "1" ]; then
-            DB_DRIVER="postgresql"
-            DB_NAME="fastpy_db"
+        DB_NAME="fastpy_db"
+
+        if [ "$DB_DRIVER" = "postgresql" ]; then
             DEFAULT_URL="postgresql://postgres:password@localhost:5432/$DB_NAME"
-            print_info "PostgreSQL selected"
 
             # Check if PostgreSQL is installed
             if ! command_exists psql; then
-                print_warning "PostgreSQL client not found. Please install PostgreSQL."
+                print_warning "PostgreSQL client not found."
                 print_info "macOS: brew install postgresql"
                 print_info "Ubuntu: sudo apt-get install postgresql-client"
             else
@@ -327,15 +388,12 @@ main() {
                 fi
             fi
 
-        elif [ "$db_choice" = "2" ]; then
-            DB_DRIVER="mysql"
-            DB_NAME="fastpy_db"
+        elif [ "$DB_DRIVER" = "mysql" ]; then
             DEFAULT_URL="mysql://root:password@localhost:3306/$DB_NAME"
-            print_info "MySQL selected"
 
             # Check if MySQL is installed
             if ! command_exists mysql; then
-                print_warning "MySQL client not found. Please install MySQL."
+                print_warning "MySQL client not found."
                 print_info "macOS: brew install mysql"
                 print_info "Ubuntu: sudo apt-get install mysql-client"
             else
@@ -348,18 +406,28 @@ main() {
                 fi
             fi
 
-        elif [ "$db_choice" = "3" ]; then
-            print_info "Skipping database configuration"
-            SKIP_DB_SETUP=true
-        else
-            print_warning "Invalid choice. Defaulting to PostgreSQL."
-            DB_DRIVER="postgresql"
-            DB_NAME="fastpy_db"
-            DEFAULT_URL="postgresql://postgres:password@localhost:5432/$DB_NAME"
+        elif [ "$DB_DRIVER" = "sqlite" ]; then
+            DEFAULT_URL="sqlite:///./fastpy.db"
+            print_info "SQLite will create a local database file: fastpy.db"
         fi
 
-        if [ "$SKIP_DB_SETUP" != "true" ]; then
-            # Database name
+        if [ "$DB_DRIVER" = "sqlite" ]; then
+            # SQLite - just set the URL
+            db_url=$DEFAULT_URL
+
+            # Update .env file
+            if [ -f ".env" ]; then
+                if [[ "$OSTYPE" == "darwin"* ]]; then
+                    sed -i '' "s|^DB_DRIVER=.*|DB_DRIVER=$DB_DRIVER|" .env
+                    sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=$db_url|" .env
+                else
+                    sed -i "s|^DB_DRIVER=.*|DB_DRIVER=$DB_DRIVER|" .env
+                    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=$db_url|" .env
+                fi
+                print_success "SQLite configuration saved to .env"
+            fi
+        else
+            # PostgreSQL or MySQL
             read -p "Enter database name (default: $DB_NAME): " custom_db_name
             if [ ! -z "$custom_db_name" ]; then
                 DB_NAME="$custom_db_name"
@@ -377,7 +445,6 @@ main() {
 
             # Update .env file
             if [ -f ".env" ]; then
-                # macOS compatible sed
                 if [[ "$OSTYPE" == "darwin"* ]]; then
                     sed -i '' "s|^DB_DRIVER=.*|DB_DRIVER=$DB_DRIVER|" .env
                     sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=$db_url|" .env
@@ -401,7 +468,7 @@ main() {
         fi
 
         # Generate secret key
-        print_step "Step 6: Generating secret key"
+        print_step "Step 7: Generating secret key"
         if command_exists openssl; then
             SECRET_KEY=$(openssl rand -hex 32)
             if [ -f ".env" ]; then
