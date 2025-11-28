@@ -22,6 +22,8 @@ export default defineConfig({
     ['meta', { property: 'og:image', content: 'https://vutia-ent.github.io/fastpy/og-image.png' }],
   ],
 
+  appearance: 'dark',
+
   themeConfig: {
     logo: '/logo.svg',
     siteTitle: 'Fastpy',

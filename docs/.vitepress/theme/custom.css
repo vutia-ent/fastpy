@@ -76,7 +76,8 @@
    Hero Section (Homepage)
    ============================================ */
 .VPHero {
-  padding: 64px 24px 80px !important;
+  padding: 96px 24px 80px !important;
+  padding-top: 120px !important;
 }
 
 .VPHero .name {
@@ -296,10 +297,11 @@
   color: var(--vp-c-brand-1);
 }
 
+/* Light mode code blocks */
 div[class*='language-'] {
   border-radius: 12px;
-  background: #1a1a1a !important;
-  border: 1px solid #2a2a2a;
+  background: #1e293b !important;
+  border: 1px solid #334155;
   overflow: hidden;
 }
 
@@ -311,6 +313,7 @@ div[class*='language-'] pre {
 div[class*='language-'] code {
   font-size: 0.875rem;
   line-height: 1.7;
+  color: #e2e8f0;
 }
 
 /* Code block header */
@@ -319,20 +322,40 @@ div[class*='language-']::before {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #666;
+  color: #94a3b8;
   padding: 8px 16px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid #334155;
   display: block;
+}
+
+/* Dark mode code blocks */
+.dark div[class*='language-'] {
+  background: #0f0f0f !important;
+  border: 1px solid #2a2a2a;
+}
+
+.dark div[class*='language-']::before {
+  color: #666;
+  border-bottom-color: #2a2a2a;
+}
+
+.dark div[class*='language-'] code {
+  color: #d1d5db;
 }
 
 /* Copy button */
 .vp-code-group .copy,
 div[class*='language-'] .copy {
-  background: #2a2a2a;
+  background: #334155;
   border: none;
   border-radius: 6px;
   opacity: 0;
   transition: all 0.2s ease;
+}
+
+.dark .vp-code-group .copy,
+.dark div[class*='language-'] .copy {
+  background: #2a2a2a;
 }
 
 .vp-code-group:hover .copy,
