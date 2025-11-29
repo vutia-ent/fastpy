@@ -101,14 +101,30 @@ extract_db_name() {
 check_database_exists() {
     local db_type=$1
     local db_name=$2
+    local db_host=$3
+    local db_port=$4
+    local db_user=$5
+    local db_pass=$6
 
     if [ "$db_type" = "postgresql" ]; then
-        if psql -U postgres -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$db_name"; then
-            return 0
+        if [ -z "$db_pass" ]; then
+            if psql -h "$db_host" -p "$db_port" -U "$db_user" -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$db_name"; then
+                return 0
+            fi
+        else
+            if PGPASSWORD="$db_pass" psql -h "$db_host" -p "$db_port" -U "$db_user" -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$db_name"; then
+                return 0
+            fi
         fi
     elif [ "$db_type" = "mysql" ]; then
-        if mysql -e "USE $db_name" 2>/dev/null; then
-            return 0
+        if [ -z "$db_pass" ]; then
+            if mysql -h "$db_host" -P "$db_port" -u "$db_user" -e "USE $db_name" 2>/dev/null; then
+                return 0
+            fi
+        else
+            if mysql -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_pass" -e "USE $db_name" 2>/dev/null; then
+                return 0
+            fi
         fi
     fi
     return 1
@@ -118,25 +134,41 @@ check_database_exists() {
 create_database() {
     local db_type=$1
     local db_name=$2
+    local db_host=$3
+    local db_port=$4
+    local db_user=$5
+    local db_pass=$6
 
     print_info "Creating database '$db_name'..."
 
     if [ "$db_type" = "postgresql" ]; then
-        if createdb -U postgres "$db_name" 2>/dev/null; then
-            print_success "Database '$db_name' created successfully"
-            return 0
+        if [ -z "$db_pass" ]; then
+            if createdb -h "$db_host" -p "$db_port" -U "$db_user" "$db_name" 2>/dev/null; then
+                print_success "Database '$db_name' created successfully"
+                return 0
+            fi
         else
-            print_warning "Could not create database. You may need to create it manually."
-            return 1
+            if PGPASSWORD="$db_pass" createdb -h "$db_host" -p "$db_port" -U "$db_user" "$db_name" 2>/dev/null; then
+                print_success "Database '$db_name' created successfully"
+                return 0
+            fi
         fi
+        print_warning "Could not create database. You may need to create it manually."
+        return 1
     elif [ "$db_type" = "mysql" ]; then
-        if mysql -e "CREATE DATABASE IF NOT EXISTS $db_name" 2>/dev/null; then
-            print_success "Database '$db_name' created successfully"
-            return 0
+        if [ -z "$db_pass" ]; then
+            if mysql -h "$db_host" -P "$db_port" -u "$db_user" -e "CREATE DATABASE IF NOT EXISTS \`$db_name\`" 2>/dev/null; then
+                print_success "Database '$db_name' created successfully"
+                return 0
+            fi
         else
-            print_warning "Could not create database. You may need to create it manually."
-            return 1
+            if mysql -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_pass" -e "CREATE DATABASE IF NOT EXISTS \`$db_name\`" 2>/dev/null; then
+                print_success "Database '$db_name' created successfully"
+                return 0
+            fi
         fi
+        print_warning "Could not create database. You may need to create it manually."
+        return 1
     fi
 }
 
@@ -483,13 +515,13 @@ main() {
             fi
 
             # Check if database exists
-            if check_database_exists "$DB_DRIVER" "$DB_NAME"; then
+            if check_database_exists "$DB_DRIVER" "$DB_NAME" "$db_host" "$db_port" "$db_user" "$db_password"; then
                 print_success "Database '$DB_NAME' already exists"
             else
                 print_warning "Database '$DB_NAME' does not exist"
                 read -p "Do you want to create it now? (y/n): " create_db
                 if [ "$create_db" = "y" ] || [ "$create_db" = "Y" ]; then
-                    create_database "$DB_DRIVER" "$DB_NAME"
+                    create_database "$DB_DRIVER" "$DB_NAME" "$db_host" "$db_port" "$db_user" "$db_password"
                 fi
             fi
         fi
