@@ -195,22 +195,25 @@ def parse_field_definition(field_str: str) -> FieldDefinition:
 
     name = parts[0]
     field_type = parts[1]
-    rules = parts[2:] if len(parts) > 2 else []
+
+    # Join remaining parts back with ':' to handle rules like max:100
+    rules_str = ":".join(parts[2:]) if len(parts) > 2 else ""
 
     kwargs = {}
     nullable = True
 
-    # Parse rules
-    for rule in rules:
-        if "," in rule:
-            for r in rule.split(","):
-                process_rule(r, kwargs)
-        else:
-            process_rule(rule, kwargs)
+    # Parse rules - split by comma first, then handle each rule
+    if rules_str:
+        for rule in rules_str.split(","):
+            rule = rule.strip()
+            if rule:
+                process_rule(rule, kwargs)
 
-    # Check if required
-    if "required" in str(rules).lower():
+    # Determine nullable from rules
+    if "required" in rules_str.lower():
         nullable = False
+    elif "nullable" in rules_str.lower():
+        nullable = True
 
     return FieldDefinition(name, field_type, nullable, **kwargs)
 
@@ -219,10 +222,12 @@ def process_rule(rule: str, kwargs: dict):
     """Process a single validation rule"""
     rule = rule.strip()
 
+    # Note: 'required' and 'nullable' are handled in parse_field_definition
+    # to avoid duplicate argument issues with FieldDefinition.__init__
     if rule == "required":
-        kwargs["nullable"] = False
+        pass  # Handled in parse_field_definition
     elif rule == "nullable":
-        kwargs["nullable"] = True
+        pass  # Handled in parse_field_definition
     elif rule == "unique":
         kwargs["unique"] = True
     elif rule == "index":
