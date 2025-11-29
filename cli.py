@@ -233,21 +233,25 @@ def process_rule(rule: str, kwargs: dict):
     elif rule == "index":
         kwargs["index"] = True
     elif rule.startswith("max:"):
-        kwargs["max_length"] = int(rule.split(":")[1])
+        kwargs["max_length"] = int(rule.split(":", 1)[1])
     elif rule.startswith("min:"):
-        kwargs["min_length"] = int(rule.split(":")[1])
+        kwargs["min_length"] = int(rule.split(":", 1)[1])
     elif rule.startswith("gt:"):
-        kwargs["min_value"] = int(rule.split(":")[1]) + 1
+        value = rule.split(":", 1)[1]
+        kwargs["min_value"] = float(value) if "." in value else int(value) + 1
     elif rule.startswith("gte:") or rule.startswith("ge:"):
-        kwargs["min_value"] = int(rule.split(":")[1])
+        value = rule.split(":", 1)[1]
+        kwargs["min_value"] = float(value) if "." in value else int(value)
     elif rule.startswith("lt:"):
-        kwargs["max_value"] = int(rule.split(":")[1]) - 1
+        value = rule.split(":", 1)[1]
+        kwargs["max_value"] = float(value) if "." in value else int(value) - 1
     elif rule.startswith("lte:") or rule.startswith("le:"):
-        kwargs["max_value"] = int(rule.split(":")[1])
+        value = rule.split(":", 1)[1]
+        kwargs["max_value"] = float(value) if "." in value else int(value)
     elif rule.startswith("foreign:"):
-        kwargs["foreign_key"] = rule.split(":")[1]
+        kwargs["foreign_key"] = rule.split(":", 1)[1]
     elif rule.startswith("default:"):
-        kwargs["default"] = rule.split(":")[1]
+        kwargs["default"] = rule.split(":", 1)[1]
 
 
 def prompt_for_fields() -> List[FieldDefinition]:
@@ -599,7 +603,7 @@ async def get_paginated(
     page: int = Query(1, ge=1),
     per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
     sort_by: Optional[str] = Query(None),
-    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     session: AsyncSession = Depends(get_session){auth_dep}
 ) -> Dict[str, Any]:
     """Get paginated {to_snake_case(name)}s with sorting"""
