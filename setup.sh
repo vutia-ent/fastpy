@@ -428,20 +428,47 @@ main() {
             fi
         else
             # PostgreSQL or MySQL
-            read -p "Enter database name (default: $DB_NAME): " custom_db_name
-            if [ ! -z "$custom_db_name" ]; then
-                DB_NAME="$custom_db_name"
-                DEFAULT_URL=$(echo "$DEFAULT_URL" | sed "s|/[^/?]*$|/$DB_NAME|")
+            echo ""
+            echo "Configure database connection:"
+            echo ""
+
+            # Database host
+            if [ "$DB_DRIVER" = "postgresql" ]; then
+                DEFAULT_HOST="localhost"
+                DEFAULT_PORT="5432"
+                DEFAULT_USER="postgres"
+            else
+                DEFAULT_HOST="localhost"
+                DEFAULT_PORT="3306"
+                DEFAULT_USER="root"
             fi
 
-            # Database URL
+            read -p "Database host (default: $DEFAULT_HOST): " db_host
+            db_host=${db_host:-$DEFAULT_HOST}
+
+            read -p "Database port (default: $DEFAULT_PORT): " db_port
+            db_port=${db_port:-$DEFAULT_PORT}
+
+            read -p "Database username (default: $DEFAULT_USER): " db_user
+            db_user=${db_user:-$DEFAULT_USER}
+
+            read -sp "Database password: " db_password
             echo ""
-            echo "Enter your database URL"
-            echo "Default: $DEFAULT_URL"
-            read -p "Database URL (or press Enter for default): " db_url
-            if [ -z "$db_url" ]; then
-                db_url=$DEFAULT_URL
+
+            read -p "Database name (default: $DB_NAME): " custom_db_name
+            if [ ! -z "$custom_db_name" ]; then
+                DB_NAME="$custom_db_name"
             fi
+
+            # Build database URL
+            if [ -z "$db_password" ]; then
+                db_url="$DB_DRIVER://$db_user@$db_host:$db_port/$DB_NAME"
+            else
+                db_url="$DB_DRIVER://$db_user:$db_password@$db_host:$db_port/$DB_NAME"
+            fi
+
+            echo ""
+            print_info "Database URL: $DB_DRIVER://$db_user:****@$db_host:$db_port/$DB_NAME"
 
             # Update .env file
             if [ -f ".env" ]; then
