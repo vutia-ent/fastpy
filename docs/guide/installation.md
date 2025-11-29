@@ -17,6 +17,13 @@ cd my-api
 
 # Run the automated setup
 ./setup.sh
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Start the development server
+python cli.py serve
+# Or: uvicorn main:app --reload
 ```
 
 The setup script will:
