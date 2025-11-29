@@ -81,12 +81,12 @@
 }
 
 .VPHero .VPImage {
-  max-width: 80px !important;
-  max-height: 80px !important;
+  max-width: 160px !important;
+  max-height: 160px !important;
 }
 
 .VPHero .image-container {
-  max-width: 100px !important;
+  max-width: 180px !important;
 }
 
 .VPHero .name {
