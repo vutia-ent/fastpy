@@ -62,8 +62,12 @@ cd my-api
 # Run setup
 ./setup.sh
 
+# Activate virtual environment
+source venv/bin/activate
+
 # Start development server
 python cli.py serve
+# Or: uvicorn main:app --reload
 ```
 
 ## Generate Resources in Seconds

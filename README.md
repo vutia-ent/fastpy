@@ -77,6 +77,19 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 git clone https://github.com/vutia-ent/fastpy.git && cd fastpy
 ./setup.sh
 
+# Activate virtual environment
+source venv/bin/activate
+
+# Start the development server
+python cli.py serve
+# Or: uvicorn main:app --reload
+```
+
+Visit: http://localhost:8000/docs
+
+### Generate Resources
+
+```bash
 # Generate a resource with FastCLI
 python cli.py make:resource Post \
   -f title:string:required,max:200 \
@@ -84,12 +97,9 @@ python cli.py make:resource Post \
   -f author_id:integer:foreign:users.id \
   -m -p
 
-# Run migrations and start
+# Run migrations
 alembic upgrade head
-python cli.py serve
 ```
-
-Visit: http://localhost:8000/docs
 
 ## FastCLI - Code Generation
 

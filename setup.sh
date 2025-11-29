@@ -610,11 +610,13 @@ main() {
     echo -e "${GREEN}✓${NC} Your Fastpy project is ready to use!"
     echo ""
     echo -e "${CYAN}Next Steps:${NC}"
-    echo -e "  1. Review .env file and update database credentials if needed"
+    echo -e "  1. Activate virtual environment: ${YELLOW}source venv/bin/activate${NC}"
     if [ "$run_migrations" != "y" ] && [ "$run_migrations" != "Y" ]; then
         echo -e "  2. Run database migrations: ${YELLOW}alembic upgrade head${NC}"
     fi
-    echo -e "  3. Start the development server: ${YELLOW}uvicorn main:app --reload${NC}"
+    echo -e "  3. Start the development server:"
+    echo -e "     ${YELLOW}python cli.py serve${NC}"
+    echo -e "     Or: ${YELLOW}uvicorn main:app --reload${NC}"
     echo -e "  4. Visit API docs: ${BLUE}http://localhost:8000/docs${NC}"
     echo ""
     echo -e "${CYAN}Useful Commands:${NC}"
