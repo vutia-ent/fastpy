@@ -80,6 +80,15 @@
   padding-top: 120px !important;
 }
 
+.VPHero .VPImage {
+  max-width: 80px !important;
+  max-height: 80px !important;
+}
+
+.VPHero .image-container {
+  max-width: 100px !important;
+}
+
 .VPHero .name {
   font-size: 3.5rem !important;
   font-weight: 800 !important;
