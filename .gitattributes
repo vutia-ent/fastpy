@@ -1,0 +1,3 @@
+# Keep main branch versions of these files during merge
+docs/** merge=ours
+CLAUDE.md merge=ours
