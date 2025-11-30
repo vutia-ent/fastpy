@@ -1831,6 +1831,7 @@ def list_commands():
         ("db:fresh", "Fresh database", "fastcli db:fresh"),
         ("db:seed", "Run seeders", "fastcli db:seed -c 20"),
         ("init:ai", "AI config file", "fastcli init:ai claude"),
+        ("update", "Update Fastpy files", "fastcli update --cli"),
         ("list", "List commands", "fastcli list"),
     ]
 
@@ -1844,6 +1845,108 @@ def list_commands():
 
     console.print("\n[cyan]Validation Rules:[/cyan]")
     console.print("  required, nullable, unique, index, max:N, min:N, gt:N, lt:N, ge:N, le:N, foreign:table.column")
+
+
+# ============================================
+# Update Command
+# ============================================
+
+FASTPY_BASE_URL = "https://raw.githubusercontent.com/vutia-ent/fastpy/main"
+
+UPDATE_FILES = {
+    "cli": ["cli.py"],
+    "utils": [
+        "app/utils/auth.py",
+        "app/utils/exceptions.py",
+        "app/utils/responses.py",
+        "app/utils/pagination.py",
+        "app/utils/logger.py",
+    ],
+    "models": ["app/models/base.py"],
+    "middleware": [
+        "app/middleware/rate_limit.py",
+        "app/middleware/request_id.py",
+        "app/middleware/timing.py",
+    ],
+    "config": ["app/config/settings.py"],
+    "database": ["app/database/connection.py"],
+}
+
+
+@app.command("update")
+def update(
+    cli: bool = typer.Option(False, "--cli", help="Update CLI only"),
+    utils: bool = typer.Option(False, "--utils", help="Update utility files"),
+    models: bool = typer.Option(False, "--models", help="Update base models"),
+    middleware: bool = typer.Option(False, "--middleware", help="Update middleware"),
+    config: bool = typer.Option(False, "--config", help="Update config"),
+    database: bool = typer.Option(False, "--database", help="Update database connection"),
+    all_files: bool = typer.Option(False, "--all", "-a", help="Update all files"),
+):
+    """Update Fastpy files from the latest release"""
+    import urllib.request
+    import urllib.error
+
+    files_to_update = []
+
+    if all_files:
+        for file_list in UPDATE_FILES.values():
+            files_to_update.extend(file_list)
+    else:
+        if cli:
+            files_to_update.extend(UPDATE_FILES["cli"])
+        if utils:
+            files_to_update.extend(UPDATE_FILES["utils"])
+        if models:
+            files_to_update.extend(UPDATE_FILES["models"])
+        if middleware:
+            files_to_update.extend(UPDATE_FILES["middleware"])
+        if config:
+            files_to_update.extend(UPDATE_FILES["config"])
+        if database:
+            files_to_update.extend(UPDATE_FILES["database"])
+
+    if not files_to_update:
+        console.print("[yellow]No update option selected.[/yellow]")
+        console.print("\nUsage:")
+        console.print("  python cli.py update --cli          # Update CLI only")
+        console.print("  python cli.py update --utils        # Update utility files")
+        console.print("  python cli.py update --middleware   # Update middleware")
+        console.print("  python cli.py update --all          # Update all files")
+        return
+
+    console.print(f"[cyan]Updating {len(files_to_update)} file(s)...[/cyan]\n")
+
+    success_count = 0
+    for file_path in files_to_update:
+        url = f"{FASTPY_BASE_URL}/{file_path}"
+        try:
+            # Backup existing file
+            local_path = Path(file_path)
+            if local_path.exists():
+                backup_path = local_path.with_suffix(local_path.suffix + ".backup")
+                backup_path.write_text(local_path.read_text())
+
+            # Download new file
+            with urllib.request.urlopen(url, timeout=10) as response:
+                content = response.read().decode('utf-8')
+                local_path.parent.mkdir(parents=True, exist_ok=True)
+                local_path.write_text(content)
+                console.print(f"[green]✓[/green] Updated {file_path}")
+                success_count += 1
+
+        except urllib.error.HTTPError as e:
+            console.print(f"[red]✗[/red] Failed to download {file_path}: HTTP {e.code}")
+        except urllib.error.URLError as e:
+            console.print(f"[red]✗[/red] Failed to download {file_path}: {e.reason}")
+        except Exception as e:
+            console.print(f"[red]✗[/red] Failed to update {file_path}: {e}")
+
+    console.print(f"\n[green]Updated {success_count}/{len(files_to_update)} files[/green]")
+
+    if success_count > 0:
+        console.print("\n[yellow]Note:[/yellow] Backup files created with .backup extension")
+        console.print("Review changes and remove backups when satisfied.")
 
 
 if __name__ == "__main__":
