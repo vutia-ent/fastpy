@@ -604,6 +604,45 @@ main() {
         print_warning "Some core packages may not be installed correctly"
     fi
 
+    # AI Assistant Configuration
+    print_header "AI Assistant Configuration"
+    echo ""
+    echo -e "${CYAN}Select an AI assistant to configure (optional):${NC}"
+    echo "  1) Claude (CLAUDE.md)"
+    echo "  2) GitHub Copilot (.github/copilot-instructions.md)"
+    echo "  3) Cursor (.cursorrules)"
+    echo "  4) Google Gemini (.gemini/instructions.md)"
+    echo "  5) Skip"
+    echo ""
+    read -p "Select option [1-5] (default: 5): " ai_choice
+    ai_choice=${ai_choice:-5}
+
+    case $ai_choice in
+        1)
+            print_info "Generating Claude configuration..."
+            python cli.py init:ai claude
+            ;;
+        2)
+            print_info "Generating GitHub Copilot configuration..."
+            python cli.py init:ai copilot
+            ;;
+        3)
+            print_info "Generating Cursor configuration..."
+            python cli.py init:ai cursor
+            ;;
+        4)
+            print_info "Generating Gemini configuration..."
+            python cli.py init:ai gemini
+            ;;
+        5)
+            print_info "Skipping AI assistant configuration"
+            echo -e "  You can configure later with: ${YELLOW}python cli.py init:ai${NC}"
+            ;;
+        *)
+            print_info "Skipping AI assistant configuration"
+            ;;
+    esac
+
     # Setup complete
     print_header "Setup Complete!"
     echo ""
