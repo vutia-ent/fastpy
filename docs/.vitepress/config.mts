@@ -142,6 +142,27 @@ export default defineConfig({
             { text: 'API Service', link: '/examples/api-service' },
           ]
         }
+      ],
+      '/fields/': [
+        {
+          text: 'CLI Commands',
+          items: [
+            { text: 'Overview', link: '/commands/overview' },
+            { text: 'Server Commands', link: '/commands/server' },
+            { text: 'Database Commands', link: '/commands/database' },
+            { text: 'Make Commands', link: '/commands/make' },
+            { text: 'AI Integration', link: '/commands/ai' },
+          ]
+        },
+        {
+          text: 'Field Types',
+          items: [
+            { text: 'Overview', link: '/fields/overview' },
+            { text: 'Basic Types', link: '/fields/basic' },
+            { text: 'Advanced Types', link: '/fields/advanced' },
+            { text: 'Validation Rules', link: '/fields/validation' },
+          ]
+        }
       ]
     },
 
