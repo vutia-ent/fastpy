@@ -56,15 +56,21 @@ Get up and running in under 2 minutes:
 
 ::: code-group
 
-```bash [Fastpy CLI]
+```bash [pip]
 # Install the CLI
 pip install fastpy-cli
 
 # Create a new project
 fastpy new my-api
+```
 
-# Start development server
-cd my-api && python cli.py serve
+```bash [Homebrew]
+# Install via Homebrew (macOS)
+brew tap vutia-ent/tap
+brew install fastpy
+
+# Create a new project
+fastpy new my-api
 ```
 
 ```bash [Git Clone]
@@ -74,12 +80,6 @@ cd my-api
 
 # Run setup
 ./setup.sh
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Start development server
-python cli.py serve
 ```
 
 :::
