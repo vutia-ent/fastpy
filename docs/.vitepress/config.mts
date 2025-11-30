@@ -4,7 +4,7 @@ export default defineConfig({
   title: 'Fastpy',
   description: 'Production-ready FastAPI starter with FastCLI code generator',
 
-  base: '/fastpy/',
+  base: '/',
 
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
@@ -12,7 +12,7 @@ export default defineConfig({
   ],
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/fastpy/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
     ['link', { href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap', rel: 'stylesheet' }],
