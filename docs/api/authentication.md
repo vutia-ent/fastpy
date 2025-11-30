@@ -13,8 +13,8 @@ Fastpy includes a complete JWT authentication system with refresh tokens.
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/auth/register` | POST | Create new user |
-| `/api/auth/login` | POST | Login (JSON body) |
-| `/api/auth/login/form` | POST | Login (form data, OAuth2 compatible) |
+| `/api/auth/login` | POST | Login (form data, OAuth2 compatible) |
+| `/api/auth/login/json` | POST | Login (JSON body) |
 | `/api/auth/refresh` | POST | Refresh access token |
 | `/api/auth/me` | GET | Get current user |
 | `/api/auth/change-password` | POST | Change password |
@@ -55,22 +55,24 @@ curl -X POST http://localhost:8000/api/auth/register \
 
 ## Login
 
-### JSON Body (Default)
+### Form Data (Default, OAuth2 Compatible)
 
 ```bash
 curl -X POST http://localhost:8000/api/auth/login \
+  -d "username=user@example.com&password=securepassword123"
+```
+
+This endpoint works with Swagger UI's Authorize button.
+
+### JSON Body
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login/json \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
     "password": "securepassword123"
   }'
-```
-
-### Form Data (OAuth2 Compatible)
-
-```bash
-curl -X POST http://localhost:8000/api/auth/login/form \
-  -d "username=user@example.com&password=securepassword123"
 ```
 
 **Response:**

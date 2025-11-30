@@ -26,8 +26,8 @@ http://localhost:8000/docs
 │                                                             │
 │  Auth                                              [Expand] │
 │  ├── POST /api/auth/register      Register new user        │
-│  ├── POST /api/auth/login         Login (JSON)             │
-│  ├── POST /api/auth/login/form    Login (OAuth2)           │
+│  ├── POST /api/auth/login         Login (OAuth2)           │
+│  ├── POST /api/auth/login/json    Login (JSON)             │
 │  ├── POST /api/auth/refresh       Refresh token            │
 │  ├── GET  /api/auth/me            Get current user         │
 │  └── POST /api/auth/logout        Logout                   │
@@ -78,37 +78,41 @@ Use this to:
 
 ## Authentication in Swagger UI
 
-### Step 1: Get a Token
+### Using the Authorize Button (Recommended)
+
+The `/api/auth/login` endpoint is OAuth2 compatible, which means you can use Swagger's built-in Authorize feature:
+
+1. Click the **Authorize** button (🔓) at the top
+2. Enter your username (email) and password
+3. Click **Authorize**
+
+Swagger will automatically handle authentication for all protected endpoints.
+
+### Manual Token Authentication
+
+Alternatively, get a token manually:
 
 1. Expand **Auth** → **POST /api/auth/login**
 2. Click **Try it out**
-3. Enter your credentials:
-   ```json
-   {
-     "email": "user@example.com",
-     "password": "yourpassword"
-   }
-   ```
+3. Enter your credentials as form data:
+   - `username`: your email
+   - `password`: your password
 4. Click **Execute**
 5. Copy the `access_token` from the response
+6. Click **Authorize** button at the top
+7. Enter: `Bearer <your-token>`
+8. Click **Authorize**
 
-### Step 2: Authorize
+### JSON Login
 
-1. Click the **Authorize** button (🔓) at the top
-2. Enter: `Bearer <your-token>`
-3. Click **Authorize**
+For programmatic access, use `/api/auth/login/json`:
 
-Now all protected endpoints will include your token.
-
-### OAuth2 Form Login
-
-For the `/api/auth/login/form` endpoint (OAuth2 compatible):
-
-1. Click **Authorize** button
-2. Enter username (email) and password
-3. Click **Authorize**
-
-Swagger will automatically handle token refresh.
+```json
+{
+  "email": "user@example.com",
+  "password": "yourpassword"
+}
+```
 
 ## Customizing API Documentation
 
@@ -230,8 +234,11 @@ app = FastAPI(
 ### HTTPie
 
 ```bash
-# Login
-http POST localhost:8000/api/auth/login email=user@example.com password=pass123
+# Login (form data)
+http --form POST localhost:8000/api/auth/login username=user@example.com password=pass123
+
+# Login (JSON)
+http POST localhost:8000/api/auth/login/json email=user@example.com password=pass123
 
 # Authenticated request
 http GET localhost:8000/api/users "Authorization: Bearer <token>"
@@ -240,8 +247,12 @@ http GET localhost:8000/api/users "Authorization: Bearer <token>"
 ### cURL
 
 ```bash
-# Login
+# Login (form data)
 curl -X POST http://localhost:8000/api/auth/login \
+  -d "username=user@example.com&password=pass123"
+
+# Login (JSON)
+curl -X POST http://localhost:8000/api/auth/login/json \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "pass123"}'
 
