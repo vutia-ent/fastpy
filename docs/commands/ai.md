@@ -1,6 +1,122 @@
-# AI Assistant Integration
+# AI Commands
 
-Fastpy includes built-in configuration generators for popular AI coding assistants. These configuration files help AI assistants understand your project structure, conventions, and available commands.
+Fastpy includes AI-powered resource generation and configuration generators for popular AI coding assistants.
+
+## AI-Powered Resource Generation
+
+Generate complete resources using natural language descriptions.
+
+```bash
+fastpy ai "Create a blog with posts, categories, and tags"
+```
+
+### Configuration
+
+Set up your preferred AI provider:
+
+```bash
+# Set provider (anthropic, openai, or ollama)
+export FASTPY_AI_PROVIDER=anthropic
+
+# Set API key for your provider
+export ANTHROPIC_API_KEY=your-api-key-here
+# or
+export OPENAI_API_KEY=your-api-key-here
+```
+
+::: tip Getting API Keys
+- **Anthropic (Claude)**: Get your key at [console.anthropic.com](https://console.anthropic.com/)
+- **OpenAI (GPT-4)**: Get your key at [platform.openai.com](https://platform.openai.com/api-keys)
+- **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
+:::
+
+### Supported Providers
+
+| Provider | Model | API Key Variable |
+|----------|-------|------------------|
+| Anthropic | Claude Sonnet | `ANTHROPIC_API_KEY` |
+| OpenAI | GPT-4 | `OPENAI_API_KEY` |
+| Ollama | Llama 3.2 (local) | None required |
+
+### Usage
+
+```bash
+# Basic usage - generates commands and asks for confirmation
+fastpy ai "E-commerce with products, orders, and customers"
+
+# Auto-execute generated commands
+fastpy ai "User management system" --execute
+
+# Preview commands without executing
+fastpy ai "Blog system" --dry-run
+
+# Use a specific provider
+fastpy ai "Task manager with projects" --provider ollama
+```
+
+### Examples
+
+```bash
+# Blog system
+fastpy ai "Create a blog with posts, categories, tags, and comments"
+
+# E-commerce
+fastpy ai "E-commerce store with products, categories, cart, and orders"
+
+# Project management
+fastpy ai "Project management with projects, tasks, and team members"
+
+# Social media
+fastpy ai "Social network with users, posts, likes, and followers"
+```
+
+### Check Configuration
+
+View your current AI configuration:
+
+```bash
+fastpy config
+```
+
+Output:
+```
+AI Configuration
+
+  Provider: anthropic
+  ANTHROPIC_API_KEY: Set
+
+Set provider with: export FASTPY_AI_PROVIDER=anthropic|openai|ollama
+```
+
+### Using Ollama (Free, Local)
+
+For a free, local option, use Ollama:
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model
+ollama pull llama3.2
+
+# Set as provider
+export FASTPY_AI_PROVIDER=ollama
+
+# Use it
+fastpy ai "Create a todo app with tasks and categories"
+```
+
+Configure Ollama:
+```bash
+export OLLAMA_MODEL=llama3.2      # Model to use
+export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
+```
+
+---
+
+## AI Assistant Configuration
+
+Fastpy also includes configuration generators for popular AI coding assistants. These configuration files help AI assistants understand your project structure, conventions, and available commands.
 
 ## Setup During Installation
 

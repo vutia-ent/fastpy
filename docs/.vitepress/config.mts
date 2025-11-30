@@ -89,7 +89,7 @@ export default defineConfig({
             { text: 'Server Commands', link: '/commands/server' },
             { text: 'Database Commands', link: '/commands/database' },
             { text: 'Make Commands', link: '/commands/make' },
-            { text: 'AI Integration', link: '/commands/ai' },
+            { text: 'AI Commands', link: '/commands/ai' },
           ]
         },
         {
@@ -151,7 +151,7 @@ export default defineConfig({
             { text: 'Server Commands', link: '/commands/server' },
             { text: 'Database Commands', link: '/commands/database' },
             { text: 'Make Commands', link: '/commands/make' },
-            { text: 'AI Integration', link: '/commands/ai' },
+            { text: 'AI Commands', link: '/commands/ai' },
           ]
         },
         {
