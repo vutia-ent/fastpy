@@ -62,6 +62,25 @@ export default defineConfig({
           ]
         }
       ],
+      '/architecture/': [
+        {
+          text: 'Getting Started',
+          items: [
+            { text: 'Introduction', link: '/guide/introduction' },
+            { text: 'Installation', link: '/guide/installation' },
+            { text: 'Quick Start', link: '/guide/quickstart' },
+            { text: 'Configuration', link: '/guide/configuration' },
+          ]
+        },
+        {
+          text: 'Architecture',
+          items: [
+            { text: 'Project Structure', link: '/architecture/structure' },
+            { text: 'Patterns', link: '/architecture/patterns' },
+            { text: 'Middleware', link: '/architecture/middleware' },
+          ]
+        }
+      ],
       '/commands/': [
         {
           text: 'CLI Commands',
