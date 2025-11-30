@@ -87,6 +87,7 @@ export default defineConfig({
         {
           text: 'API Reference',
           items: [
+            { text: 'Swagger UI / OpenAPI', link: '/api/swagger' },
             { text: 'Authentication', link: '/api/authentication' },
             { text: 'Responses', link: '/api/responses' },
             { text: 'Exceptions', link: '/api/exceptions' },
