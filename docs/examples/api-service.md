@@ -14,7 +14,7 @@ We'll create:
 
 ```bash
 # Tenant (Organization)
-python cli.py make:resource Tenant \
+fastpy make:resource Tenant \
   -f name:string:required,max:100 \
   -f slug:slug:required,unique,index \
   -f plan:string:default:free \
@@ -22,7 +22,7 @@ python cli.py make:resource Tenant \
   -m
 
 # API Key
-python cli.py make:resource ApiKey \
+fastpy make:resource ApiKey \
   -f key:string:required,unique,index \
   -f name:string:required,max:100 \
   -f tenant_id:integer:required,foreign:tenants.id \
@@ -33,7 +33,7 @@ python cli.py make:resource ApiKey \
   -m -p
 
 # Usage Log
-python cli.py make:model UsageLog \
+fastpy make:model UsageLog \
   -f api_key_id:integer:required,foreign:api_keys.id \
   -f endpoint:string:required,max:200 \
   -f method:string:required,max:10 \
@@ -43,7 +43,7 @@ python cli.py make:model UsageLog \
   -m
 
 # Webhook
-python cli.py make:resource Webhook \
+fastpy make:resource Webhook \
   -f url:url:required \
   -f tenant_id:integer:required,foreign:tenants.id \
   -f events:json:required \

@@ -145,7 +145,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 Generate middleware with CLI:
 
 ```bash
-python cli.py make:middleware MyCustom
+fastpy make:middleware MyCustom
 ```
 
 ### Template

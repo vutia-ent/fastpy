@@ -7,7 +7,7 @@ Code generators for creating models, controllers, routes, and more.
 Generate a complete resource (model + controller + routes).
 
 ```bash
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f body:text:required \
   -m -p
@@ -34,7 +34,7 @@ python cli.py make:resource Post \
 Generate just a model.
 
 ```bash
-python cli.py make:model Post -f title:string:required -f body:text
+fastpy make:model Post -f title:string:required -f body:text
 ```
 
 ### Options
@@ -64,7 +64,7 @@ class Post(BaseModel, table=True):
 Generate a controller.
 
 ```bash
-python cli.py make:controller Post
+fastpy make:controller Post
 ```
 
 ### Generated Code
@@ -117,7 +117,7 @@ class PostController:
 Generate route definitions.
 
 ```bash
-python cli.py make:route Post --protected
+fastpy make:route Post --protected
 ```
 
 ### Options
@@ -152,7 +152,7 @@ async def list_posts(
 Generate a service class with business logic hooks.
 
 ```bash
-python cli.py make:service Post
+fastpy make:service Post
 ```
 
 ### Generated Code
@@ -178,7 +178,7 @@ class PostService(BaseService[Post]):
 Generate a repository class for data access.
 
 ```bash
-python cli.py make:repository Post
+fastpy make:repository Post
 ```
 
 ## make:middleware
@@ -186,7 +186,7 @@ python cli.py make:repository Post
 Generate custom middleware.
 
 ```bash
-python cli.py make:middleware RateLimit
+fastpy make:middleware RateLimit
 ```
 
 ### Generated Code
@@ -207,7 +207,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 Generate a database seeder.
 
 ```bash
-python cli.py make:seeder Post
+fastpy make:seeder Post
 ```
 
 ## make:factory
@@ -215,7 +215,7 @@ python cli.py make:seeder Post
 Generate a test factory.
 
 ```bash
-python cli.py make:factory Post
+fastpy make:factory Post
 ```
 
 ### Generated Code
@@ -237,7 +237,7 @@ class PostFactory(factory.Factory):
 Generate a test file.
 
 ```bash
-python cli.py make:test Post
+fastpy make:test Post
 ```
 
 ## make:enum
@@ -245,7 +245,7 @@ python cli.py make:test Post
 Generate an enum.
 
 ```bash
-python cli.py make:enum PostStatus
+fastpy make:enum PostStatus
 ```
 
 ### Generated Code
@@ -264,7 +264,7 @@ class PostStatus(str, Enum):
 Generate a custom exception.
 
 ```bash
-python cli.py make:exception PostNotFound
+fastpy make:exception PostNotFound
 ```
 
 ### Generated Code

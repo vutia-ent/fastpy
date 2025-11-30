@@ -7,7 +7,7 @@ Commands for running and managing the development server.
 Start the development server with auto-reload.
 
 ```bash
-python cli.py serve
+fastpy serve
 ```
 
 ### Options
@@ -23,13 +23,13 @@ python cli.py serve
 
 ```bash
 # Default (localhost:8000)
-python cli.py serve
+fastpy serve
 
 # Custom host and port
-python cli.py serve --host 0.0.0.0 --port 3000
+fastpy serve --host 0.0.0.0 --port 3000
 
 # Production mode (no reload)
-python cli.py serve --reload false --workers 4
+fastpy serve --reload false --workers 4
 ```
 
 ### Direct uvicorn Usage
@@ -49,7 +49,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 Display all registered routes.
 
 ```bash
-python cli.py route:list
+fastpy route:list
 ```
 
 ### Options
@@ -63,16 +63,16 @@ python cli.py route:list
 
 ```bash
 # List all routes
-python cli.py route:list
+fastpy route:list
 
 # Filter by tag
-python cli.py route:list --tag Users
+fastpy route:list --tag Users
 
 # Filter by method
-python cli.py route:list --method POST
+fastpy route:list --method POST
 
 # Combine filters
-python cli.py route:list --tag Auth --method POST
+fastpy route:list --tag Auth --method POST
 ```
 
 ### Output

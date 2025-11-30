@@ -4,17 +4,21 @@ FastCLI is a powerful code generator built into Fastpy. It automates the creatio
 
 ## Getting Started
 
-List all available commands:
+If you have `fastpy-cli` installed globally, you can use `fastpy` directly inside your project:
 
 ```bash
+# Using fastpy (recommended)
+fastpy list
+fastpy make:model --help
+
+# Or using python cli.py
 python cli.py list
-```
-
-Get help for any command:
-
-```bash
 python cli.py make:model --help
 ```
+
+::: tip
+Install the global CLI with `pip install fastpy-cli` to use `fastpy` instead of `python cli.py` for all commands.
+:::
 
 ## Command Categories
 
@@ -62,7 +66,7 @@ python cli.py make:model --help
 ### Generate a Complete Resource
 
 ```bash
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f body:text:required \
   -m -p
@@ -78,29 +82,29 @@ Options:
 
 ```bash
 # Just the model
-python cli.py make:model Post -f title:string:required
+fastpy make:model Post -f title:string:required
 
 # Just the controller
-python cli.py make:controller Post
+fastpy make:controller Post
 
 # Just the routes
-python cli.py make:route Post --protected
+fastpy make:route Post --protected
 ```
 
 ### Database Operations
 
 ```bash
 # Create migration
-python cli.py db:migrate -m "Add posts table"
+fastpy db:migrate -m "Add posts table"
 
 # Rollback last migration
-python cli.py db:rollback
+fastpy db:rollback
 
 # Rollback multiple
-python cli.py db:rollback --steps 3
+fastpy db:rollback --steps 3
 
 # Fresh start
-python cli.py db:fresh
+fastpy db:fresh
 ```
 
 ## Field Definition Syntax

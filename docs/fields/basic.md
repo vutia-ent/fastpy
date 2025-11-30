@@ -155,7 +155,7 @@ Update with `model.touch()`.
 ## Combining Types
 
 ```bash
-python cli.py make:model Article \
+fastpy make:model Article \
   -f title:string:required,max:200 \
   -f slug:string:required,unique,index \
   -f body:text:required \

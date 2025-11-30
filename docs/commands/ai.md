@@ -25,13 +25,13 @@ You can also generate AI configurations at any time:
 
 ```bash
 # Interactive mode - choose from menu
-python cli.py init:ai
+fastpy init:ai
 
 # Direct selection
-python cli.py init:ai claude
-python cli.py init:ai copilot
-python cli.py init:ai cursor
-python cli.py init:ai gemini
+fastpy init:ai claude
+fastpy init:ai copilot
+fastpy init:ai cursor
+fastpy init:ai gemini
 ```
 
 ## Supported AI Assistants
@@ -43,7 +43,7 @@ python cli.py init:ai gemini
 For use with [Claude Code](https://claude.ai/code) - Anthropic's CLI tool.
 
 ```bash
-python cli.py init:ai claude
+fastpy init:ai claude
 ```
 
 ### GitHub Copilot
@@ -53,7 +53,7 @@ python cli.py init:ai claude
 For use with GitHub Copilot in VS Code, JetBrains, and other IDEs.
 
 ```bash
-python cli.py init:ai copilot
+fastpy init:ai copilot
 ```
 
 ### Cursor AI
@@ -63,7 +63,7 @@ python cli.py init:ai copilot
 For use with the [Cursor](https://cursor.sh) AI-powered code editor.
 
 ```bash
-python cli.py init:ai cursor
+fastpy init:ai cursor
 ```
 
 ### Google Gemini
@@ -73,7 +73,7 @@ python cli.py init:ai cursor
 For use with Google Gemini Code Assist.
 
 ```bash
-python cli.py init:ai gemini
+fastpy init:ai gemini
 ```
 
 ## What's Included in the Configuration
@@ -87,7 +87,7 @@ The generated configuration file includes comprehensive project context:
 source venv/bin/activate
 
 # Start development server
-python cli.py serve
+fastpy serve
 uvicorn main:app --reload
 ```
 
@@ -95,29 +95,29 @@ uvicorn main:app --reload
 
 ```bash
 # Generate complete resource
-python cli.py make:resource Post -f title:string:required -m -p
+fastpy make:resource Post -f title:string:required -m -p
 
 # Individual generators
-python cli.py make:model Post -f title:string:required -m
-python cli.py make:controller Post
-python cli.py make:route Post --protected
-python cli.py make:service Post
-python cli.py make:repository Post
-python cli.py make:middleware Logging
-python cli.py make:test Post
-python cli.py make:factory Post
-python cli.py make:seeder Post
-python cli.py make:enum Status -v active -v inactive
-python cli.py make:exception NotFound -s 404
+fastpy make:model Post -f title:string:required -m
+fastpy make:controller Post
+fastpy make:route Post --protected
+fastpy make:service Post
+fastpy make:repository Post
+fastpy make:middleware Logging
+fastpy make:test Post
+fastpy make:factory Post
+fastpy make:seeder Post
+fastpy make:enum Status -v active -v inactive
+fastpy make:exception NotFound -s 404
 ```
 
 ### Database Commands
 
 ```bash
-python cli.py db:migrate
-python cli.py db:rollback
-python cli.py db:fresh
-python cli.py db:seed
+fastpy db:migrate
+fastpy db:rollback
+fastpy db:fresh
+fastpy db:seed
 ```
 
 ### Project Architecture
@@ -176,7 +176,7 @@ You: Create a Product model with name, price, and category
 
 Claude: I'll create a Product model using Fastpy conventions:
 
-python cli.py make:resource Product \
+fastpy make:resource Product \
   -f name:string:required,max:200 \
   -f price:money:required,ge:0 \
   -f category_id:integer:required,foreign:categories.id \

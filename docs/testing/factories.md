@@ -74,7 +74,7 @@ users = UserFactory.build_batch(10)
 Generate with CLI:
 
 ```bash
-python cli.py make:factory Post
+fastpy make:factory Post
 ```
 
 ### Basic Factory

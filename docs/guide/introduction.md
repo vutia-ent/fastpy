@@ -41,7 +41,7 @@ Not just a demo project. Includes everything you need for real-world APIs: auth,
 Create a complete API resource in seconds:
 
 ```bash
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f body:text:required \
   -f author_id:integer:foreign:users.id \

@@ -120,7 +120,7 @@ if is_rate_limited(client_ip):
 Generate with CLI:
 
 ```bash
-python cli.py make:exception PostNotFound
+fastpy make:exception PostNotFound
 ```
 
 ### Manual Creation

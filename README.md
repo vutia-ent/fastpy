@@ -81,7 +81,7 @@ git clone https://github.com/vutia-ent/fastpy.git && cd fastpy
 source venv/bin/activate
 
 # Start the development server
-python cli.py serve
+fastpy serve
 # Or: uvicorn main:app --reload
 ```
 
@@ -91,7 +91,7 @@ Visit: http://localhost:8000/docs
 
 ```bash
 # Generate a resource with FastCLI
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f body:text:required \
   -f author_id:integer:foreign:users.id \
@@ -107,42 +107,42 @@ alembic upgrade head
 
 ```bash
 # List all commands
-python cli.py list
+fastpy list
 
 # Server Management
-python cli.py serve                    # Start development server
-python cli.py serve --host 0.0.0.0     # Custom host
-python cli.py route:list               # List all routes
-python cli.py route:list --tag Users   # Filter by tag
+fastpy serve                    # Start development server
+fastpy serve --host 0.0.0.0     # Custom host
+fastpy route:list               # List all routes
+fastpy route:list --tag Users   # Filter by tag
 
 # Database Commands
-python cli.py db:migrate -m "Add posts"  # Create migration
-python cli.py db:rollback                # Rollback one migration
-python cli.py db:rollback --steps 3      # Rollback multiple
-python cli.py db:fresh                   # Drop all & re-migrate
-python cli.py db:seed                    # Run all seeders
-python cli.py db:seed --seeder User      # Run specific seeder
+fastpy db:migrate -m "Add posts"  # Create migration
+fastpy db:rollback                # Rollback one migration
+fastpy db:rollback --steps 3      # Rollback multiple
+fastpy db:fresh                   # Drop all & re-migrate
+fastpy db:seed                    # Run all seeders
+fastpy db:seed --seeder User      # Run specific seeder
 
 # Resource Generation
-python cli.py make:model Post -f title:string:required -m
-python cli.py make:controller Post
-python cli.py make:route Post --protected
-python cli.py make:resource Post -i -m -p  # All at once
+fastpy make:model Post -f title:string:required -m
+fastpy make:controller Post
+fastpy make:route Post --protected
+fastpy make:resource Post -i -m -p  # All at once
 
 # Additional Generators
-python cli.py make:service Post          # Service class
-python cli.py make:repository Post       # Repository class
-python cli.py make:middleware Auth       # Middleware
-python cli.py make:seeder Post           # Database seeder
-python cli.py make:test Post             # Test file
-python cli.py make:factory Post          # Test factory
-python cli.py make:enum Status           # Enum class
-python cli.py make:exception NotFound    # Custom exception
+fastpy make:service Post          # Service class
+fastpy make:repository Post       # Repository class
+fastpy make:middleware Auth       # Middleware
+fastpy make:seeder Post           # Database seeder
+fastpy make:test Post             # Test file
+fastpy make:factory Post          # Test factory
+fastpy make:enum Status           # Enum class
+fastpy make:exception NotFound    # Custom exception
 
 # AI Assistant Config
-python cli.py init:ai claude             # Claude Code
-python cli.py init:ai copilot            # GitHub Copilot
-python cli.py init:ai cursor             # Cursor AI
+fastpy init:ai claude             # Claude Code
+fastpy init:ai copilot            # GitHub Copilot
+fastpy init:ai cursor             # Cursor AI
 ```
 
 ### Field Definition Syntax
@@ -192,7 +192,7 @@ python cli.py init:ai cursor             # Cursor AI
 
 **Blog System:**
 ```bash
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200,min:5 \
   -f slug:slug:required,unique \
   -f body:text:required,min:50 \
@@ -204,7 +204,7 @@ python cli.py make:resource Post \
 
 **E-commerce Product:**
 ```bash
-python cli.py make:resource Product \
+fastpy make:resource Product \
   -f name:string:required,max:255 \
   -f description:text:nullable \
   -f price:money:required,ge:0 \
@@ -217,7 +217,7 @@ python cli.py make:resource Product \
 
 **User Profile:**
 ```bash
-python cli.py make:resource Profile \
+fastpy make:resource Profile \
   -f user_id:integer:required,unique,foreign:users.id \
   -f bio:text:nullable,max:1000 \
   -f avatar:image:nullable \

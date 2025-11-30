@@ -224,7 +224,7 @@ Rules can be combined with commas:
 ### User Model
 
 ```bash
-python cli.py make:model User \
+fastpy make:model User \
   -f email:email:required,unique,index \
   -f password:string:required,min:8 \
   -f username:string:required,unique,max:50 \
@@ -236,7 +236,7 @@ python cli.py make:model User \
 ### Product Model
 
 ```bash
-python cli.py make:model Product \
+fastpy make:model Product \
   -f name:string:required,max:200 \
   -f sku:string:required,unique,max:50 \
   -f price:money:required,min:0 \
@@ -249,7 +249,7 @@ python cli.py make:model Product \
 ### Order Model
 
 ```bash
-python cli.py make:model Order \
+fastpy make:model Order \
   -f order_number:string:required,unique,index \
   -f user_id:integer:required,foreign:users.id \
   -f status:string:default:pending \

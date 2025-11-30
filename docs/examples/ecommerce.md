@@ -14,14 +14,14 @@ We'll create:
 
 ```bash
 # Category
-python cli.py make:resource Category \
+fastpy make:resource Category \
   -f name:string:required,max:100 \
   -f slug:slug:required,unique,index \
   -f parent_id:integer:foreign:categories.id,nullable \
   -m
 
 # Product
-python cli.py make:resource Product \
+fastpy make:resource Product \
   -f name:string:required,max:200 \
   -f slug:slug:required,unique,index \
   -f description:text:nullable \
@@ -34,19 +34,19 @@ python cli.py make:resource Product \
   -m -p
 
 # Cart
-python cli.py make:resource Cart \
+fastpy make:resource Cart \
   -f user_id:integer:foreign:users.id,unique \
   -m -p
 
 # CartItem
-python cli.py make:resource CartItem \
+fastpy make:resource CartItem \
   -f cart_id:integer:required,foreign:carts.id \
   -f product_id:integer:required,foreign:products.id \
   -f quantity:integer:required,min:1 \
   -m -p
 
 # Order
-python cli.py make:resource Order \
+fastpy make:resource Order \
   -f order_number:string:required,unique,index \
   -f user_id:integer:required,foreign:users.id \
   -f status:string:default:pending \
@@ -58,7 +58,7 @@ python cli.py make:resource Order \
   -m -p
 
 # OrderItem
-python cli.py make:model OrderItem \
+fastpy make:model OrderItem \
   -f order_id:integer:required,foreign:orders.id \
   -f product_id:integer:required,foreign:products.id \
   -f quantity:integer:required,min:1 \
@@ -70,7 +70,7 @@ python cli.py make:model OrderItem \
 ## Order Status Enum
 
 ```bash
-python cli.py make:enum OrderStatus
+fastpy make:enum OrderStatus
 ```
 
 ```python

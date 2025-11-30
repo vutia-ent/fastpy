@@ -167,7 +167,7 @@ os.environ["TESTING"] = "1"
 ## Generating Tests
 
 ```bash
-python cli.py make:test Post
+fastpy make:test Post
 ```
 
 This creates `tests/test_posts.py`:

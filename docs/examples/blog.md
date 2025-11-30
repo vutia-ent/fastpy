@@ -14,14 +14,14 @@ We'll create:
 
 ```bash
 # Category
-python cli.py make:resource Category \
+fastpy make:resource Category \
   -f name:string:required,max:100 \
   -f slug:slug:required,unique,index \
   -f description:text:nullable \
   -m
 
 # Post
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f slug:slug:required,unique,index \
   -f body:text:required \
@@ -34,7 +34,7 @@ python cli.py make:resource Post \
   -m -p
 
 # Comment
-python cli.py make:resource Comment \
+fastpy make:resource Comment \
   -f body:text:required \
   -f post_id:integer:required,foreign:posts.id \
   -f user_id:integer:required,foreign:users.id \
@@ -42,13 +42,13 @@ python cli.py make:resource Comment \
   -m -p
 
 # Tag
-python cli.py make:model Tag \
+fastpy make:model Tag \
   -f name:string:required,max:50,unique \
   -f slug:slug:required,unique,index \
   -m
 
 # Post-Tag pivot
-python cli.py make:model PostTag \
+fastpy make:model PostTag \
   -f post_id:integer:required,foreign:posts.id \
   -f tag_id:integer:required,foreign:tags.id \
   -m
@@ -57,7 +57,7 @@ python cli.py make:model PostTag \
 ## Run Migrations
 
 ```bash
-python cli.py db:migrate -m "Create blog tables"
+fastpy db:migrate -m "Create blog tables"
 ```
 
 ## Enhanced Models

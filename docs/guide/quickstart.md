@@ -9,7 +9,7 @@ Build your first API resource in under 5 minutes.
 source venv/bin/activate
 
 # Start development server
-python cli.py serve
+fastpy serve
 ```
 
 Your API is now running at [http://localhost:8000](http://localhost:8000).
@@ -26,7 +26,7 @@ Visit the interactive documentation:
 Let's create a complete blog post resource:
 
 ```bash
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f slug:slug:unique \
   -f body:text:required \
@@ -47,7 +47,7 @@ This generates:
 ## Apply the Migration
 
 ```bash
-python cli.py db:migrate -m "Create posts table"
+fastpy db:migrate -m "Create posts table"
 ```
 
 ## Register the Routes

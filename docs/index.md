@@ -88,7 +88,7 @@ cd my-api
 
 ```bash
 # Create a complete blog post resource
-python cli.py make:resource Post \
+fastpy make:resource Post \
   -f title:string:required,max:200 \
   -f body:text:required \
   -f published_at:datetime:nullable \

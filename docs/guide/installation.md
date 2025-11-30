@@ -78,7 +78,7 @@ cd my-api
 source venv/bin/activate
 
 # Start the development server
-python cli.py serve
+fastpy serve
 # Or: uvicorn main:app --reload
 ```
 
@@ -169,7 +169,7 @@ mysql -e "CREATE DATABASE mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ```bash
 # Start the development server
-python cli.py serve
+fastpy serve
 
 # Or with uvicorn directly
 uvicorn main:app --reload

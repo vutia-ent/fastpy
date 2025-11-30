@@ -7,7 +7,7 @@ Commands for managing database migrations and seeding.
 Create a new Alembic migration.
 
 ```bash
-python cli.py db:migrate -m "Description of changes"
+fastpy db:migrate -m "Description of changes"
 ```
 
 ### Options
@@ -21,10 +21,10 @@ python cli.py db:migrate -m "Description of changes"
 
 ```bash
 # Create migration from model changes
-python cli.py db:migrate -m "Create posts table"
+fastpy db:migrate -m "Create posts table"
 
 # After editing a model
-python cli.py db:migrate -m "Add slug to posts"
+fastpy db:migrate -m "Add slug to posts"
 ```
 
 ### How It Works
@@ -47,7 +47,7 @@ from app.models.post import Post  # Add new models here
 Rollback database migrations.
 
 ```bash
-python cli.py db:rollback
+fastpy db:rollback
 ```
 
 ### Options
@@ -60,10 +60,10 @@ python cli.py db:rollback
 
 ```bash
 # Rollback one migration
-python cli.py db:rollback
+fastpy db:rollback
 
 # Rollback three migrations
-python cli.py db:rollback --steps 3
+fastpy db:rollback --steps 3
 
 # Rollback to specific revision
 alembic downgrade abc123
@@ -74,7 +74,7 @@ alembic downgrade abc123
 Drop all tables and run all migrations. **Use with caution!**
 
 ```bash
-python cli.py db:fresh
+fastpy db:fresh
 ```
 
 ::: danger Data Loss Warning
@@ -92,7 +92,7 @@ This command destroys ALL data. Only use in development.
 Run database seeders to populate with test data.
 
 ```bash
-python cli.py db:seed
+fastpy db:seed
 ```
 
 ### Options
@@ -106,13 +106,13 @@ python cli.py db:seed
 
 ```bash
 # Run all seeders
-python cli.py db:seed
+fastpy db:seed
 
 # Run specific seeder
-python cli.py db:seed --seeder User
+fastpy db:seed --seeder User
 
 # Create 50 records
-python cli.py db:seed --seeder Post --count 50
+fastpy db:seed --seeder Post --count 50
 ```
 
 ### Creating Seeders
@@ -120,7 +120,7 @@ python cli.py db:seed --seeder Post --count 50
 Generate a seeder:
 
 ```bash
-python cli.py make:seeder Post
+fastpy make:seeder Post
 ```
 
 This creates `app/seeders/post_seeder.py`:
@@ -173,10 +173,10 @@ alembic upgrade abc123
 
 ```bash
 # Good
-python cli.py db:migrate -m "Add published_at column to posts"
+fastpy db:migrate -m "Add published_at column to posts"
 
 # Bad
-python cli.py db:migrate -m "update"
+fastpy db:migrate -m "update"
 ```
 
 ### 2. Review Before Applying
