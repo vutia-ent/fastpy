@@ -609,6 +609,60 @@ python -c "import secrets; print(secrets.token_hex(32))"
 python -c "from app.database.connection import check_db_connection; import asyncio; print(asyncio.run(check_db_connection()))"
 ```
 
+## Updating an Existing Project
+
+To get the latest Fastpy updates in an existing project:
+
+### Update CLI Only (Recommended)
+
+The CLI (`cli.py`) contains all code generators and commands. To update just the CLI:
+
+```bash
+# Download the latest cli.py
+curl -o cli.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/cli.py
+
+# Or using wget
+wget -O cli.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/cli.py
+```
+
+### Update Core Utilities
+
+To update the utility files (auth, exceptions, responses, pagination):
+
+```bash
+# Update utils
+curl -o app/utils/auth.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/auth.py
+curl -o app/utils/exceptions.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/exceptions.py
+curl -o app/utils/responses.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/responses.py
+curl -o app/utils/pagination.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/pagination.py
+```
+
+### Update Base Models
+
+```bash
+curl -o app/models/base.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/models/base.py
+```
+
+### Update Middleware
+
+```bash
+curl -o app/middleware/rate_limit.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/middleware/rate_limit.py
+curl -o app/middleware/request_id.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/middleware/request_id.py
+curl -o app/middleware/timing.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/middleware/timing.py
+```
+
+### Full Update (New Projects Only)
+
+For a fresh start, clone the latest version:
+
+```bash
+git clone https://github.com/vutia-ent/fastpy.git my-new-api
+cd my-new-api
+./setup.sh
+```
+
+:warning: **Note**: Be careful when updating files you've customized. Always backup your changes first.
+
 ## Contributing
 
 Contributions welcome:
