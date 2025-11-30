@@ -1708,8 +1708,8 @@ All models inherit from `BaseModel` which provides:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/auth/register` | POST | Register new user (JSON) |
-| `/api/auth/login` | POST | Login (JSON: email, password) |
-| `/api/auth/login/form` | POST | Login (form-data, OAuth2) |
+| `/api/auth/login` | POST | Login (form-data, OAuth2) |
+| `/api/auth/login/json` | POST | Login (JSON: email, password) |
 | `/api/auth/refresh` | POST | Refresh access token |
 | `/api/auth/me` | GET | Get current user |
 | `/api/auth/change-password` | POST | Change password |
