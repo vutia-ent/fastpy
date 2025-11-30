@@ -1409,6 +1409,22 @@ asyncio.run(run_seeders())
 # Server Commands
 # ============================================
 
+def is_port_in_use(port: int) -> bool:
+    """Check if a port is in use"""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+
+def find_available_port(start_port: int, max_attempts: int = 10) -> int:
+    """Find an available port starting from start_port"""
+    for i in range(max_attempts):
+        port = start_port + i
+        if not is_port_in_use(port):
+            return port
+    return start_port + max_attempts
+
+
 @app.command("serve")
 def serve(
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind"),
@@ -1416,6 +1432,12 @@ def serve(
     reload: bool = typer.Option(True, "--reload/--no-reload", help="Enable auto-reload"),
 ):
     """Start the development server"""
+    # Check if port is in use and find alternative
+    if is_port_in_use(port):
+        original_port = port
+        port = find_available_port(port + 1)
+        console.print(f"[yellow]⚠[/yellow] Port {original_port} is in use, using port {port} instead")
+
     console.print(f"[cyan]Starting server on {host}:{port}...[/cyan]")
 
     cmd = ["uvicorn", "main:app", f"--host={host}", f"--port={port}"]
