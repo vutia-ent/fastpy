@@ -262,8 +262,8 @@ raise ConflictException("Email already exists")
 - Refresh tokens (long-lived, default 7 days)
 - Token endpoints:
   - `POST /api/auth/register` - Create new user
-  - `POST /api/auth/login` - Login (form data)
-  - `POST /api/auth/login/json` - Login (JSON body)
+  - `POST /api/auth/login` - Login (JSON body)
+  - `POST /api/auth/login/form` - Login (form data, OAuth2 compatible)
   - `POST /api/auth/refresh` - Refresh access token
   - `GET /api/auth/me` - Get current user
   - `POST /api/auth/change-password` - Change password

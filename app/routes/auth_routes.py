@@ -50,11 +50,27 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_se
 
 @router.post("/login")
 async def login(
+    credentials: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+) -> Dict[str, Any]:
+    """
+    Login with JSON body.
+    Returns access token, refresh token, and user info.
+
+    - **email**: Email address
+    - **password**: Password
+    """
+    user = await AuthController.authenticate_user(session, credentials.email, credentials.password)
+    return AuthController.create_tokens(user)
+
+
+@router.post("/login/form")
+async def login_form(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_session),
 ) -> Dict[str, Any]:
     """
-    Login with username (email) and password.
+    Login with form-data (OAuth2 compatible).
     Returns access token, refresh token, and user info.
 
     Use form-data with:
@@ -62,19 +78,6 @@ async def login(
     - **password**: Password
     """
     user = await AuthController.authenticate_user(session, form_data.username, form_data.password)
-    return AuthController.create_tokens(user)
-
-
-@router.post("/login/json")
-async def login_json(
-    credentials: LoginRequest,
-    session: AsyncSession = Depends(get_session),
-) -> Dict[str, Any]:
-    """
-    Login with JSON body.
-    Returns access token, refresh token, and user info.
-    """
-    user = await AuthController.authenticate_user(session, credentials.email, credentials.password)
     return AuthController.create_tokens(user)
 
 

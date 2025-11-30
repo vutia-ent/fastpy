@@ -57,11 +57,11 @@ async def test_register_invalid_password(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient, test_user: User):
-    """Test successful login with form data."""
+    """Test successful login with JSON body."""
     response = await client.post(
         "/api/auth/login",
-        data={
-            "username": test_user.email,
+        json={
+            "email": test_user.email,
             "password": "password123"
         }
     )
@@ -74,12 +74,12 @@ async def test_login_success(client: AsyncClient, test_user: User):
 
 
 @pytest.mark.asyncio
-async def test_login_json(client: AsyncClient, test_user: User):
-    """Test login with JSON body."""
+async def test_login_form(client: AsyncClient, test_user: User):
+    """Test login with form data (OAuth2 compatible)."""
     response = await client.post(
-        "/api/auth/login/json",
-        json={
-            "email": test_user.email,
+        "/api/auth/login/form",
+        data={
+            "username": test_user.email,
             "password": "password123"
         }
     )
@@ -94,8 +94,8 @@ async def test_login_invalid_password(client: AsyncClient, test_user: User):
     """Test login with wrong password."""
     response = await client.post(
         "/api/auth/login",
-        data={
-            "username": test_user.email,
+        json={
+            "email": test_user.email,
             "password": "wrongpassword"
         }
     )
@@ -107,8 +107,8 @@ async def test_login_nonexistent_user(client: AsyncClient):
     """Test login with non-existent user."""
     response = await client.post(
         "/api/auth/login",
-        data={
-            "username": "nonexistent@example.com",
+        json={
+            "email": "nonexistent@example.com",
             "password": "password123"
         }
     )
@@ -138,8 +138,8 @@ async def test_refresh_token(client: AsyncClient, test_user: User):
     # First login to get tokens
     login_response = await client.post(
         "/api/auth/login",
-        data={
-            "username": test_user.email,
+        json={
+            "email": test_user.email,
             "password": "password123"
         }
     )
@@ -172,8 +172,8 @@ async def test_change_password(client: AsyncClient, test_user: User, auth_header
     # Verify can login with new password
     login_response = await client.post(
         "/api/auth/login",
-        data={
-            "username": test_user.email,
+        json={
+            "email": test_user.email,
             "password": "newPassword456"
         }
     )

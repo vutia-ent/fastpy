@@ -349,8 +349,8 @@ tests/
 | Endpoint | Description |
 |----------|-------------|
 | `POST /api/auth/register` | Register new user |
-| `POST /api/auth/login` | Login (form data) |
-| `POST /api/auth/login/json` | Login (JSON body) |
+| `POST /api/auth/login` | Login (JSON body) |
+| `POST /api/auth/login/form` | Login (form data, OAuth2 compatible) |
 | `POST /api/auth/refresh` | Refresh access token |
 | `GET /api/auth/me` | Get current user |
 | `POST /api/auth/change-password` | Change password |
@@ -370,7 +370,7 @@ curl -X POST http://localhost:8000/api/auth/register \
 
 **Login:**
 ```bash
-curl -X POST http://localhost:8000/api/auth/login/json \
+curl -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "john@example.com", "password": "securePass123"}'
 ```
