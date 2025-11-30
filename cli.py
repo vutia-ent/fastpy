@@ -1547,70 +1547,232 @@ Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT au
 - **Authentication**: JWT with bcrypt, refresh tokens
 - **Migrations**: Alembic
 - **CLI**: FastCLI (code generator)
+- **Testing**: pytest + pytest-asyncio + factory-boy
 
-## Quick Commands
+## Development Commands
 
 ```bash
-# Server
-fastcli serve                              # Start dev server
-fastcli route:list                         # List all routes
+# Activate virtual environment (required before running commands)
+source venv/bin/activate
 
-# Code Generation
-fastcli make:resource Post -f title:string:required -m -p
-fastcli make:model Post -f title:string:required -m
-fastcli make:controller Post
-fastcli make:route Post --protected
-fastcli make:service Post
-fastcli make:repository Post
-fastcli make:middleware Logging
-fastcli make:test Post
-fastcli make:factory Post
-fastcli make:seeder Post
-fastcli make:enum Status -v active -v inactive
-fastcli make:exception PaymentFailed -s 400
+# Start development server
+python cli.py serve
+# Or: uvicorn main:app --reload
 
-# Database
-fastcli db:migrate                         # Run migrations
-fastcli db:rollback                        # Rollback migration
-fastcli db:fresh                           # Drop all and migrate
-fastcli db:seed                            # Run seeders
-alembic revision --autogenerate -m "msg"   # Create migration
+# List all routes
+python cli.py route:list
 ```
 
-## Field Types
+## Code Generation (FastCLI)
 
+```bash
+# Generate complete resource (model + controller + routes)
+python cli.py make:resource Post -f title:string:required,max:200 -f body:text:required -m -p
+
+# Individual generators
+python cli.py make:model Post -f title:string:required -m      # Model + migration
+python cli.py make:controller Post                              # Controller
+python cli.py make:route Post --protected                       # Routes (with auth)
+python cli.py make:service Post                                 # Service class
+python cli.py make:repository Post                              # Repository class
+python cli.py make:middleware Logging                           # Middleware
+python cli.py make:test Post                                    # Test file
+python cli.py make:factory Post                                 # Test factory
+python cli.py make:seeder Post                                  # Database seeder
+python cli.py make:enum Status -v active -v inactive            # Enum
+python cli.py make:exception PaymentFailed -s 400               # Custom exception
+
+# List all commands
+python cli.py list
+```
+
+## Database Commands
+
+```bash
+python cli.py db:migrate                         # Run migrations
+python cli.py db:rollback                        # Rollback one migration
+python cli.py db:rollback --steps 3              # Rollback multiple
+python cli.py db:fresh                           # Drop all & re-migrate
+python cli.py db:seed                            # Run all seeders
+python cli.py db:seed --seeder User --count 50   # Run specific seeder
+
+# Alembic directly
+alembic revision --autogenerate -m "Add posts table"
+alembic upgrade head
+alembic downgrade -1
+```
+
+## Field Definition Syntax
+
+**Format:** `name:type:rules`
+
+**Field Types:**
 string, text, integer, bigint, float, decimal, money, percent, boolean, datetime, date, time, email, url, uuid, json, phone, slug, ip, color, file, image
 
-## Field Rules
+**Validation Rules:**
+- `required` - Field cannot be null
+- `nullable` - Field can be null
+- `unique` - Unique constraint
+- `index` - Database index
+- `max:N` - Maximum length/value
+- `min:N` - Minimum length/value
+- `ge:N` / `gte:N` - Greater than or equal
+- `le:N` / `lte:N` - Less than or equal
+- `gt:N` - Greater than
+- `lt:N` - Less than
+- `foreign:table.column` - Foreign key
 
-required, nullable, unique, index, max:N, min:N, gt:N, lt:N, ge:N, le:N, foreign:table.column
+**Examples:**
+```bash
+-f title:string:required,max:200
+-f price:decimal:required,ge:0
+-f user_id:integer:required,foreign:users.id
+-f email:email:required,unique
+-f published_at:datetime:nullable
+```
 
-## Architecture
+## Project Architecture
 
 ```
 app/
-├── config/       # Settings
-├── controllers/  # Business logic
-├── models/       # SQLModel models
-├── routes/       # API endpoints
-├── services/     # Service layer
-├── repositories/ # Data access
-├── middleware/   # Custom middleware
-├── seeders/      # Database seeders
-├── enums/        # Enumerations
-└── utils/        # Helpers
+├── config/           # Application settings (settings.py)
+├── controllers/      # Business logic (CRUD operations)
+├── database/         # DB connection and session management
+├── enums/            # Enum definitions
+├── middleware/       # Custom middleware
+│   ├── request_id.py   # X-Request-ID tracking
+│   ├── timing.py       # X-Response-Time header
+│   └── rate_limit.py   # Sliding window rate limiting
+├── models/           # SQLModel models with Pydantic schemas
+├── repositories/     # Data access layer (BaseRepository)
+├── routes/           # API route definitions
+├── seeders/          # Database seeders
+├── services/         # Business logic services (BaseService)
+└── utils/
+    ├── auth.py         # JWT & password hashing
+    ├── exceptions.py   # Custom exceptions
+    ├── logger.py       # Structured logging
+    ├── pagination.py   # Pagination utilities
+    └── responses.py    # Standard response format
+
+tests/
+├── conftest.py       # Pytest fixtures
+├── factories.py      # Test data factories
+└── test_*.py         # Test files
 ```
 
-## Conventions
+## Naming Conventions
 
-- Tables: plural, snake_case (users, blog_posts)
-- Models: singular, PascalCase (User, BlogPost)
-- Files: snake_case (user_controller.py)
-- All models inherit from BaseModel (soft deletes, timestamps)
+- **Tables**: plural, snake_case (`users`, `blog_posts`)
+- **Models**: singular, PascalCase (`User`, `BlogPost`)
+- **Files**: snake_case (`user_controller.py`)
+- **Controllers**: `{Model}Controller`
+- **Routes**: `{model}_routes.py`
 
-## User Instructions
+## Base Model Features
 
-All table Actions should be in an ActionGroup
+All models inherit from `BaseModel` which provides:
+- `id` - Auto-incrementing primary key
+- `created_at` - Timestamp on creation
+- `updated_at` - Timestamp on update
+- `deleted_at` - Soft delete timestamp
+- `soft_delete()` - Soft delete method
+- `restore()` - Restore soft deleted record
+- `is_deleted` - Property to check if deleted
+- `touch()` - Update timestamps
+
+## Authentication Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/register` | POST | Register new user (JSON) |
+| `/api/auth/login` | POST | Login (JSON: email, password) |
+| `/api/auth/login/form` | POST | Login (form-data, OAuth2) |
+| `/api/auth/refresh` | POST | Refresh access token |
+| `/api/auth/me` | GET | Get current user |
+| `/api/auth/change-password` | POST | Change password |
+| `/api/auth/logout` | POST | Logout |
+
+## Protecting Routes
+
+```python
+from app.utils.auth import get_current_active_user
+from app.models.user import User
+
+@router.get("/protected")
+async def protected_route(current_user: User = Depends(get_current_active_user)):
+    return {"user": current_user}
+```
+
+## Standard Response Format
+
+```python
+from app.utils.responses import success_response, error_response, paginated_response
+
+# Success
+return success_response(data=user, message="User created")
+
+# Error
+return error_response(message="Not found", code="NOT_FOUND", status_code=404)
+
+# Paginated
+return paginated_response(items=users, page=1, per_page=20, total=100)
+```
+
+## Custom Exceptions
+
+```python
+from app.utils.exceptions import (
+    NotFoundException,      # 404
+    BadRequestException,    # 400
+    UnauthorizedException,  # 401
+    ForbiddenException,     # 403
+    ConflictException,      # 409
+    ValidationException,    # 422
+    RateLimitException      # 429
+)
+
+raise NotFoundException("User not found")
+```
+
+## Middleware
+
+- **RequestIDMiddleware** - Adds X-Request-ID to requests/responses
+- **TimingMiddleware** - Adds X-Response-Time header
+- **RateLimitMiddleware** - Sliding window rate limiting (configurable in .env)
+
+## Health Check Endpoints
+
+- `GET /health/` - Basic health check
+- `GET /health/ready` - Readiness (includes DB)
+- `GET /health/live` - Liveness probe
+- `GET /health/info` - Service information
+
+## Testing
+
+```bash
+pytest                              # Run all tests
+pytest -v                           # Verbose output
+pytest tests/test_auth.py           # Specific file
+pytest --cov=app --cov-report=html  # With coverage
+```
+
+## Environment Variables
+
+Key settings in `.env`:
+- `DB_DRIVER` - postgresql or mysql
+- `DATABASE_URL` - Database connection string
+- `SECRET_KEY` - JWT secret (change in production!)
+- `ACCESS_TOKEN_EXPIRE_MINUTES` - Token expiry (default: 30)
+- `RATE_LIMIT_ENABLED` - Enable rate limiting
+- `LOG_LEVEL` - Logging level (INFO, DEBUG, etc.)
+
+## User-Specific Instructions
+
+- All table Actions should be in an ActionGroup
+- Use JSON for all POST/PUT/PATCH request bodies
+- Always use async/await for database operations
+- Filter soft deletes in queries: `where(Model.deleted_at.is_(None))`
 '''
     return base_content
 
