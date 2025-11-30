@@ -25,7 +25,7 @@ async def get_users_paginated(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
     sort_by: Optional[str] = Query(None, description="Field to sort by"),
-    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     session: AsyncSession = Depends(get_session)
 ) -> Dict[str, Any]:
     """Get paginated users with sorting"""
