@@ -246,22 +246,23 @@ main() {
     print_step "Step 4: Select database"
     echo ""
     echo "Which database will you use?"
-    echo "  1) PostgreSQL (recommended)"
-    echo "  2) MySQL"
+    echo "  1) MySQL (recommended)"
+    echo "  2) PostgreSQL"
     echo "  3) SQLite (for development/testing only)"
     echo ""
-    read -p "Enter your choice (1-3): " db_choice
+    read -p "Enter your choice [1-3] (default: 1): " db_choice
+    db_choice=${db_choice:-1}
 
     case $db_choice in
         1)
-            DB_DRIVER="postgresql"
-            DB_PACKAGE="psycopg2-binary"
-            print_success "PostgreSQL selected"
-            ;;
-        2)
             DB_DRIVER="mysql"
             DB_PACKAGE="mysqlclient pymysql"
             print_success "MySQL selected"
+            ;;
+        2)
+            DB_DRIVER="postgresql"
+            DB_PACKAGE="psycopg2-binary"
+            print_success "PostgreSQL selected"
             ;;
         3)
             DB_DRIVER="sqlite"
@@ -269,9 +270,9 @@ main() {
             print_success "SQLite selected"
             ;;
         *)
-            print_warning "Invalid choice. Defaulting to PostgreSQL."
-            DB_DRIVER="postgresql"
-            DB_PACKAGE="psycopg2-binary"
+            print_warning "Invalid choice. Defaulting to MySQL."
+            DB_DRIVER="mysql"
+            DB_PACKAGE="mysqlclient pymysql"
             ;;
     esac
 
