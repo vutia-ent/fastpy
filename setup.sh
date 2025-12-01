@@ -214,7 +214,8 @@ main() {
     print_step "Step 2: Setting up virtual environment"
     if [ -d "venv" ]; then
         print_warning "Virtual environment already exists."
-        read -p "Do you want to recreate it? (y/n): " recreate_venv
+        read -p "Do you want to recreate it? [y/N]: " recreate_venv
+        recreate_venv=${recreate_venv:-n}
         if [ "$recreate_venv" = "y" ] || [ "$recreate_venv" = "Y" ]; then
             print_info "Removing existing virtual environment..."
             rm -rf venv
@@ -377,7 +378,8 @@ main() {
     print_step "Step 6: Configuring environment"
     if [ -f ".env" ]; then
         print_warning ".env file already exists."
-        read -p "Do you want to reconfigure it? (y/n): " reconfig_env
+        read -p "Do you want to reconfigure it? [y/N]: " reconfig_env
+        reconfig_env=${reconfig_env:-n}
         if [ "$reconfig_env" = "y" ] || [ "$reconfig_env" = "Y" ]; then
             mv .env .env.backup.$(date +%s)
             print_info "Existing .env backed up"
@@ -519,7 +521,8 @@ main() {
                 print_success "Database '$DB_NAME' already exists"
             else
                 print_warning "Database '$DB_NAME' does not exist"
-                read -p "Do you want to create it now? (y/n): " create_db
+                read -p "Do you want to create it now? [Y/n]: " create_db
+                create_db=${create_db:-y}
                 if [ "$create_db" = "y" ] || [ "$create_db" = "Y" ]; then
                     create_database "$DB_DRIVER" "$DB_NAME" "$db_host" "$db_port" "$db_user" "$db_password"
                 fi
@@ -547,7 +550,8 @@ main() {
     # Database migration
     if [ "$SKIP_DB_SETUP" != "true" ]; then
         print_header "Database Migration"
-        read -p "Do you want to run database migrations now? (y/n): " run_migrations
+        read -p "Do you want to run database migrations now? [Y/n]: " run_migrations
+        run_migrations=${run_migrations:-y}
 
         if [ "$run_migrations" = "y" ] || [ "$run_migrations" = "Y" ]; then
             # Check if migrations exist
@@ -580,7 +584,8 @@ main() {
         # Create super admin user
         if [ "$run_migrations" = "y" ] || [ "$run_migrations" = "Y" ]; then
             echo ""
-            read -p "Do you want to create a super admin user? (y/n): " create_admin
+            read -p "Do you want to create a super admin user? [Y/n]: " create_admin
+            create_admin=${create_admin:-y}
             if [ "$create_admin" = "y" ] || [ "$create_admin" = "Y" ]; then
                 print_header "Create Super Admin User"
 
@@ -649,7 +654,8 @@ asyncio.run(create_admin())
 
     # Setup pre-commit hooks (optional)
     print_header "Code Quality Setup"
-    read -p "Do you want to set up pre-commit hooks? (y/n): " setup_precommit
+    read -p "Do you want to set up pre-commit hooks? [Y/n]: " setup_precommit
+    setup_precommit=${setup_precommit:-y}
     if [ "$setup_precommit" = "y" ] || [ "$setup_precommit" = "Y" ]; then
         if command_exists git && [ -d ".git" ]; then
             print_info "Installing pre-commit hooks..."
