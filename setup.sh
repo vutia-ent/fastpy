@@ -576,6 +576,75 @@ main() {
         else
             print_info "Skipping migrations. Run 'alembic upgrade head' when ready."
         fi
+
+        # Create super admin user
+        if [ "$run_migrations" = "y" ] || [ "$run_migrations" = "Y" ]; then
+            echo ""
+            read -p "Do you want to create a super admin user? (y/n): " create_admin
+            if [ "$create_admin" = "y" ] || [ "$create_admin" = "Y" ]; then
+                print_header "Create Super Admin User"
+
+                read -p "Admin name (default: Admin): " admin_name
+                admin_name=${admin_name:-Admin}
+
+                read -p "Admin email: " admin_email
+                while [ -z "$admin_email" ]; do
+                    print_warning "Email is required"
+                    read -p "Admin email: " admin_email
+                done
+
+                read -sp "Admin password (min 8 chars): " admin_password
+                echo ""
+                while [ ${#admin_password} -lt 8 ]; do
+                    print_warning "Password must be at least 8 characters"
+                    read -sp "Admin password (min 8 chars): " admin_password
+                    echo ""
+                done
+
+                # Create admin user via Python
+                print_info "Creating super admin user..."
+                if python -c "
+import asyncio
+from app.database.connection import get_session, engine
+from app.models.user import User
+from app.utils.auth import get_password_hash
+from sqlmodel import select
+from datetime import datetime, timezone
+
+async def create_admin():
+    async with engine.begin() as conn:
+        pass
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+    async with AsyncSession(engine) as session:
+        # Check if user already exists
+        result = await session.execute(select(User).where(User.email == '$admin_email'))
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            print('User with this email already exists')
+            return False
+
+        # Create user
+        user = User(
+            name='$admin_name',
+            email='$admin_email',
+            password=get_password_hash('$admin_password'),
+            email_verified_at=datetime.now(timezone.utc).isoformat()
+        )
+        session.add(user)
+        await session.commit()
+        print(f'Super admin created: $admin_email')
+        return True
+
+asyncio.run(create_admin())
+" >> "$LOG_FILE" 2>&1; then
+                    print_success "Super admin user created: $admin_email"
+                else
+                    print_error "Failed to create admin user. Check $LOG_FILE"
+                fi
+            fi
+        fi
     fi
 
     # Setup pre-commit hooks (optional)
@@ -620,23 +689,23 @@ main() {
     case $ai_choice in
         1)
             print_info "Generating Claude configuration..."
-            python cli.py init:ai claude
+            python cli.py init:ai claude 2>/dev/null || fastpy init:ai claude
             ;;
         2)
             print_info "Generating GitHub Copilot configuration..."
-            python cli.py init:ai copilot
+            python cli.py init:ai copilot 2>/dev/null || fastpy init:ai copilot
             ;;
         3)
             print_info "Generating Cursor configuration..."
-            python cli.py init:ai cursor
+            python cli.py init:ai cursor 2>/dev/null || fastpy init:ai cursor
             ;;
         4)
             print_info "Generating Gemini configuration..."
-            python cli.py init:ai gemini
+            python cli.py init:ai gemini 2>/dev/null || fastpy init:ai gemini
             ;;
         5)
             print_info "Skipping AI assistant configuration"
-            echo -e "  You can configure later with: ${YELLOW}python cli.py init:ai${NC}"
+            echo -e "  You can configure later with: ${YELLOW}fastpy init:ai${NC}"
             ;;
         *)
             print_info "Skipping AI assistant configuration"
@@ -654,12 +723,12 @@ main() {
         echo -e "  2. Run database migrations: ${YELLOW}alembic upgrade head${NC}"
     fi
     echo -e "  3. Start the development server:"
-    echo -e "     ${YELLOW}python cli.py serve${NC}"
+    echo -e "     ${YELLOW}fastpy serve${NC}"
     echo -e "     Or: ${YELLOW}uvicorn main:app --reload${NC}"
     echo -e "  4. Visit API docs: ${BLUE}http://localhost:8000/docs${NC}"
     echo ""
     echo -e "${CYAN}Useful Commands:${NC}"
-    echo -e "  ${YELLOW}python cli.py make:resource Post -m${NC}  - Generate model, controller & routes"
+    echo -e "  ${YELLOW}fastpy make:resource Post -m${NC}  - Generate model, controller & routes"
     echo -e "  ${YELLOW}pytest${NC}                               - Run tests"
     echo -e "  ${YELLOW}black .${NC}                              - Format code"
     echo -e "  ${YELLOW}ruff check .${NC}                         - Lint code"
