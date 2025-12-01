@@ -1764,9 +1764,65 @@ raise NotFoundException("User not found")
 
 ## Middleware
 
-- **RequestIDMiddleware** - Adds X-Request-ID to requests/responses
-- **TimingMiddleware** - Adds X-Response-Time header
-- **RateLimitMiddleware** - Sliding window rate limiting (configurable in .env)
+### Built-in Middleware
+
+| Middleware | Header | Description |
+|------------|--------|-------------|
+| `RequestIDMiddleware` | `X-Request-ID` | Unique ID for request tracing |
+| `TimingMiddleware` | `X-Response-Time` | Response time in ms |
+| `RateLimitMiddleware` | `X-RateLimit-*` | Sliding window rate limiting |
+
+### Request ID Middleware
+Adds unique request ID for tracing:
+```python
+# Access in route
+from starlette.requests import Request
+
+@router.get("/")
+async def route(request: Request):
+    request_id = request.state.request_id
+```
+
+### Timing Middleware
+Logs slow requests (>1s) and adds `X-Response-Time` header.
+
+### Rate Limit Middleware
+Configure in `.env`:
+```bash
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100    # requests per window
+RATE_LIMIT_WINDOW=60       # window in seconds
+```
+
+Response headers:
+- `X-RateLimit-Limit` - Max requests allowed
+- `X-RateLimit-Remaining` - Requests remaining
+- `X-RateLimit-Reset` - Seconds until reset
+
+### Creating Custom Middleware
+```bash
+fastpy make:middleware Logging
+```
+
+Example middleware structure:
+```python
+# app/middleware/logging_middleware.py
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Before request
+        response = await call_next(request)
+        # After request
+        return response
+```
+
+Register in `main.py`:
+```python
+from app.middleware.logging_middleware import LoggingMiddleware
+app.add_middleware(LoggingMiddleware)
+```
 
 ## Health Check Endpoints
 
