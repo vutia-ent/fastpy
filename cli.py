@@ -363,7 +363,12 @@ class {model_name}(BaseModel, table=True):
 
     __tablename__ = "{table_name}"
 
+    id: Optional[int] = Field(default=None, primary_key=True)
 {model_fields}
+    # Timestamps (always last)
+    created_at: datetime = Field(default_factory=utc_now, nullable=False)
+    updated_at: datetime = Field(default_factory=utc_now, nullable=False)
+    deleted_at: Optional[datetime] = Field(default=None, nullable=True)
 
 
 class {model_name}Create(BaseModel):
