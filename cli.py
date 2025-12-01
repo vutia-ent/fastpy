@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FastCLI - Code generation CLI tool for FastAPI project
-Usage: python cli.py [command] or fastcli [command] (after pip install -e .)
+Usage: fastpy [command] (install with: pip install fastpy-cli)
 """
 import typer
 import subprocess
@@ -363,7 +363,12 @@ class {model_name}(BaseModel, table=True):
 
     __tablename__ = "{table_name}"
 
+    id: Optional[int] = Field(default=None, primary_key=True)
 {model_fields}
+    # Timestamps (always last)
+    created_at: datetime = Field(default_factory=utc_now, nullable=False)
+    updated_at: datetime = Field(default_factory=utc_now, nullable=False)
+    deleted_at: Optional[datetime] = Field(default=None, nullable=True)
 
 
 class {model_name}Create(BaseModel):
@@ -1578,45 +1583,45 @@ Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT au
 source venv/bin/activate
 
 # Start development server
-python cli.py serve
+fastpy serve
 # Or: uvicorn main:app --reload
 
 # List all routes
-python cli.py route:list
+fastpy route:list
 ```
 
 ## Code Generation (FastCLI)
 
 ```bash
 # Generate complete resource (model + controller + routes)
-python cli.py make:resource Post -f title:string:required,max:200 -f body:text:required -m -p
+fastpy make:resource Post -f title:string:required,max:200 -f body:text:required -m -p
 
 # Individual generators
-python cli.py make:model Post -f title:string:required -m      # Model + migration
-python cli.py make:controller Post                              # Controller
-python cli.py make:route Post --protected                       # Routes (with auth)
-python cli.py make:service Post                                 # Service class
-python cli.py make:repository Post                              # Repository class
-python cli.py make:middleware Logging                           # Middleware
-python cli.py make:test Post                                    # Test file
-python cli.py make:factory Post                                 # Test factory
-python cli.py make:seeder Post                                  # Database seeder
-python cli.py make:enum Status -v active -v inactive            # Enum
-python cli.py make:exception PaymentFailed -s 400               # Custom exception
+fastpy make:model Post -f title:string:required -m      # Model + migration
+fastpy make:controller Post                              # Controller
+fastpy make:route Post --protected                       # Routes (with auth)
+fastpy make:service Post                                 # Service class
+fastpy make:repository Post                              # Repository class
+fastpy make:middleware Logging                           # Middleware
+fastpy make:test Post                                    # Test file
+fastpy make:factory Post                                 # Test factory
+fastpy make:seeder Post                                  # Database seeder
+fastpy make:enum Status -v active -v inactive            # Enum
+fastpy make:exception PaymentFailed -s 400               # Custom exception
 
 # List all commands
-python cli.py list
+fastpy list
 ```
 
 ## Database Commands
 
 ```bash
-python cli.py db:migrate                         # Run migrations
-python cli.py db:rollback                        # Rollback one migration
-python cli.py db:rollback --steps 3              # Rollback multiple
-python cli.py db:fresh                           # Drop all & re-migrate
-python cli.py db:seed                            # Run all seeders
-python cli.py db:seed --seeder User --count 50   # Run specific seeder
+fastpy db:migrate                         # Run migrations
+fastpy db:rollback                        # Rollback one migration
+fastpy db:rollback --steps 3              # Rollback multiple
+fastpy db:fresh                           # Drop all & re-migrate
+fastpy db:seed                            # Run all seeders
+fastpy db:seed --seeder User --count 50   # Run specific seeder
 
 # Alembic directly
 alembic revision --autogenerate -m "Add posts table"
@@ -1909,10 +1914,10 @@ def update(
     if not files_to_update:
         console.print("[yellow]No update option selected.[/yellow]")
         console.print("\nUsage:")
-        console.print("  python cli.py update --cli          # Update CLI only")
-        console.print("  python cli.py update --utils        # Update utility files")
-        console.print("  python cli.py update --middleware   # Update middleware")
-        console.print("  python cli.py update --all          # Update all files")
+        console.print("  fastpy update --cli          # Update CLI only")
+        console.print("  fastpy update --utils        # Update utility files")
+        console.print("  fastpy update --middleware   # Update middleware")
+        console.print("  fastpy update --all          # Update all files")
         return
 
     console.print(f"[cyan]Updating {len(files_to_update)} file(s)...[/cyan]\n")

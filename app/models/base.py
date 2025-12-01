@@ -12,12 +12,10 @@ class BaseModel(SQLModel):
     """
     Base model with Laravel-style timestamps and soft deletes.
     All models should inherit from this.
-    """
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=utc_now, nullable=False)
-    updated_at: datetime = Field(default_factory=utc_now, nullable=False)
-    deleted_at: Optional[datetime] = Field(default=None, nullable=True)
+    Note: id, created_at, updated_at, deleted_at are defined in each model
+    to ensure proper column ordering (timestamps at end of table).
+    """
 
     class Config:
         """SQLModel configuration"""

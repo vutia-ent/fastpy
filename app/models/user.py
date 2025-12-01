@@ -4,7 +4,7 @@ from pydantic import EmailStr, field_validator
 from sqlmodel import Field
 import re
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, utc_now
 
 
 class User(BaseModel, table=True):
@@ -15,11 +15,16 @@ class User(BaseModel, table=True):
 
     __tablename__ = "users"
 
+    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(nullable=False, max_length=255)
     email: str = Field(nullable=False, unique=True, max_length=255, index=True)
     email_verified_at: Optional[str] = Field(default=None, nullable=True)
     password: str = Field(nullable=False, max_length=255)
     remember_token: Optional[str] = Field(default=None, nullable=True, max_length=100)
+    # Timestamps (always last)
+    created_at: datetime = Field(default_factory=utc_now, nullable=False)
+    updated_at: datetime = Field(default_factory=utc_now, nullable=False)
+    deleted_at: Optional[datetime] = Field(default=None, nullable=True)
 
     class Config:
         """SQLModel configuration"""
