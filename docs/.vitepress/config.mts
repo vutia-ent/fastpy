@@ -2,9 +2,15 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Fastpy',
-  description: 'Production-ready FastAPI starter with FastCLI code generator',
+  description: 'Production-ready FastAPI starter kit with 30+ CLI code generators, JWT authentication, SQLModel ORM, and built-in facades for rapid API development.',
 
   base: '/',
+
+  cleanUrls: true,
+  lastUpdated: true,
+  sitemap: {
+    hostname: 'https://vutia-ent.github.io/fastpy'
+  },
 
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
@@ -12,17 +18,77 @@ export default defineConfig({
   ],
 
   head: [
+    // Favicon
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
+
+    // Fonts
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
     ['link', { href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap', rel: 'stylesheet' }],
+
+    // Primary Meta Tags
+    ['meta', { name: 'title', content: 'Fastpy - Production-ready FastAPI Starter Kit' }],
+    ['meta', { name: 'description', content: 'Build FastAPI applications 10x faster with 30+ CLI generators, JWT authentication, SQLModel ORM, and built-in facades. The ultimate Python API starter kit.' }],
+    ['meta', { name: 'keywords', content: 'FastAPI, Python, API, REST API, CLI, code generator, JWT, authentication, SQLModel, SQLAlchemy, Pydantic, starter kit, boilerplate, backend, web development' }],
+    ['meta', { name: 'author', content: 'Vutia' }],
+    ['meta', { name: 'robots', content: 'index, follow' }],
+    ['meta', { name: 'language', content: 'English' }],
+    ['meta', { name: 'revisit-after', content: '7 days' }],
+
+    // Open Graph / Facebook
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'Fastpy - Production-ready FastAPI Starter' }],
-    ['meta', { property: 'og:description', content: 'Build FastAPI applications faster with FastCLI code generator, JWT auth, and battle-tested patterns.' }],
+    ['meta', { property: 'og:url', content: 'https://vutia-ent.github.io/fastpy/' }],
+    ['meta', { property: 'og:title', content: 'Fastpy - Production-ready FastAPI Starter Kit' }],
+    ['meta', { property: 'og:description', content: 'Build FastAPI applications 10x faster with 30+ CLI generators, JWT authentication, and built-in facades.' }],
     ['meta', { property: 'og:image', content: 'https://vutia-ent.github.io/fastpy/og-image.png' }],
+    ['meta', { property: 'og:site_name', content: 'Fastpy' }],
+    ['meta', { property: 'og:locale', content: 'en_US' }],
+
+    // Twitter
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:url', content: 'https://vutia-ent.github.io/fastpy/' }],
+    ['meta', { name: 'twitter:title', content: 'Fastpy - Production-ready FastAPI Starter Kit' }],
+    ['meta', { name: 'twitter:description', content: 'Build FastAPI applications 10x faster with 30+ CLI generators, JWT authentication, and built-in facades.' }],
+    ['meta', { name: 'twitter:image', content: 'https://vutia-ent.github.io/fastpy/og-image.png' }],
+    ['meta', { name: 'twitter:creator', content: '@vutia' }],
+
+    // Schema.org structured data
+    ['script', { type: 'application/ld+json' }, JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Fastpy',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Cross-platform',
+      description: 'Production-ready FastAPI starter kit with CLI code generators, JWT authentication, and built-in facades.',
+      url: 'https://vutia-ent.github.io/fastpy/',
+      author: {
+        '@type': 'Organization',
+        name: 'Vutia',
+        url: 'https://github.com/vutia-ent'
+      },
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD'
+      },
+      programmingLanguage: 'Python',
+      softwareRequirements: 'Python 3.9+',
+      license: 'https://opensource.org/licenses/MIT'
+    })],
   ],
 
   appearance: 'dark',
+
+  markdown: {
+    lineNumbers: true,
+    theme: {
+      light: 'github-light',
+      dark: 'github-dark'
+    }
+  },
 
   themeConfig: {
     logo: '/logo.svg',
@@ -31,6 +97,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'CLI Commands', link: '/commands/overview' },
+      { text: 'Libs', link: '/libs/overview' },
       { text: 'API Reference', link: '/api/authentication' },
       { text: 'Examples', link: '/examples/blog' },
       {
@@ -114,6 +181,23 @@ export default defineConfig({
           ]
         }
       ],
+      '/libs/': [
+        {
+          text: 'Fastpy Libs',
+          items: [
+            { text: 'Overview', link: '/libs/overview' },
+            { text: 'Http', link: '/libs/http' },
+            { text: 'Cache', link: '/libs/cache' },
+            { text: 'Mail', link: '/libs/mail' },
+            { text: 'Storage', link: '/libs/storage' },
+            { text: 'Queue', link: '/libs/queue' },
+            { text: 'Events', link: '/libs/events' },
+            { text: 'Hash', link: '/libs/hashing' },
+            { text: 'Crypt', link: '/libs/encryption' },
+            { text: 'Notify', link: '/libs/notifications' },
+          ]
+        }
+      ],
       '/testing/': [
         {
           text: 'Testing',
@@ -182,11 +266,45 @@ export default defineConfig({
     },
 
     search: {
-      provider: 'local'
+      provider: 'local',
+      options: {
+        detailedView: true,
+        miniSearch: {
+          searchOptions: {
+            fuzzy: 0.2,
+            prefix: true,
+            boost: {
+              title: 4,
+              text: 2,
+              titles: 1
+            }
+          }
+        }
+      }
     },
 
     outline: {
-      level: [2, 3]
-    }
+      level: [2, 3],
+      label: 'On this page'
+    },
+
+    lastUpdated: {
+      text: 'Updated at',
+      formatOptions: {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }
+    },
+
+    docFooter: {
+      prev: 'Previous',
+      next: 'Next'
+    },
+
+    returnToTopLabel: 'Back to top',
+    sidebarMenuLabel: 'Menu',
+    darkModeSwitchLabel: 'Theme',
+    lightModeSwitchTitle: 'Switch to light mode',
+    darkModeSwitchTitle: 'Switch to dark mode'
   }
 })

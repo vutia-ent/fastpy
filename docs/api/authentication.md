@@ -1,27 +1,56 @@
+---
+title: JWT Authentication - Fastpy API Reference
+description: Complete JWT authentication system with access tokens, refresh tokens, password reset, and email verification for your FastAPI application.
+head:
+  - - meta
+    - name: keywords
+      content: JWT authentication, FastAPI auth, access token, refresh token, Python authentication, API security
+---
+
 # Authentication
 
 Fastpy includes a complete JWT authentication system with refresh tokens.
 
 ## Overview
 
-- **Access Tokens** - Short-lived (30 min default), for API access
-- **Refresh Tokens** - Long-lived (7 days default), for token renewal
-- **Password Hashing** - bcrypt with automatic salting
+<div class="auth-overview">
+  <div class="auth-card">
+    <div class="auth-icon">🎫</div>
+    <div class="auth-content">
+      <h4>Access Tokens</h4>
+      <p>Short-lived (30 min), for API access</p>
+    </div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-icon">🔄</div>
+    <div class="auth-content">
+      <h4>Refresh Tokens</h4>
+      <p>Long-lived (7 days), for renewal</p>
+    </div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-icon">🔒</div>
+    <div class="auth-content">
+      <h4>Password Hashing</h4>
+      <p>bcrypt with automatic salting</p>
+    </div>
+  </div>
+</div>
 
 ## Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/auth/register` | POST | Create new user |
-| `/api/auth/login` | POST | Login (form data, OAuth2 compatible) |
-| `/api/auth/login/json` | POST | Login (JSON body) |
-| `/api/auth/refresh` | POST | Refresh access token |
-| `/api/auth/me` | GET | Get current user |
-| `/api/auth/change-password` | POST | Change password |
-| `/api/auth/forgot-password` | POST | Request password reset |
-| `/api/auth/reset-password` | POST | Reset password |
-| `/api/auth/verify-email` | POST | Verify email |
-| `/api/auth/logout` | POST | Logout |
+| `/api/auth/register` | `POST` | Create new user |
+| `/api/auth/login` | `POST` | Login (form data, OAuth2 compatible) |
+| `/api/auth/login/json` | `POST` | Login (JSON body) |
+| `/api/auth/refresh` | `POST` | Refresh access token |
+| `/api/auth/me` | `GET` | Get current user |
+| `/api/auth/change-password` | `POST` | Change password |
+| `/api/auth/forgot-password` | `POST` | Request password reset |
+| `/api/auth/reset-password` | `POST` | Reset password |
+| `/api/auth/verify-email` | `POST` | Verify email |
+| `/api/auth/logout` | `POST` | Logout |
 
 ## Registration
 
@@ -55,18 +84,15 @@ curl -X POST http://localhost:8000/api/auth/register \
 
 ## Login
 
-### Form Data (Default, OAuth2 Compatible)
+::: code-group
 
-```bash
+```bash [Form Data (OAuth2)]
+# Works with Swagger UI's Authorize button
 curl -X POST http://localhost:8000/api/auth/login \
   -d "username=user@example.com&password=securepassword123"
 ```
 
-This endpoint works with Swagger UI's Authorize button.
-
-### JSON Body
-
-```bash
+```bash [JSON Body]
 curl -X POST http://localhost:8000/api/auth/login/json \
   -H "Content-Type: application/json" \
   -d '{
@@ -74,6 +100,8 @@ curl -X POST http://localhost:8000/api/auth/login/json \
     "password": "securepassword123"
   }'
 ```
+
+:::
 
 **Response:**
 
@@ -214,9 +242,119 @@ is_valid = verify_password("mypassword", hashed_password)
 
 ## Security Best Practices
 
-1. **Use HTTPS** in production
-2. **Rotate SECRET_KEY** periodically
-3. **Short access token lifetime** (15-30 minutes)
-4. **Store refresh tokens securely** (httpOnly cookies or secure storage)
-5. **Implement token blacklisting** for logout
-6. **Use strong passwords** (min 8 characters)
+::: warning Important
+Always follow these practices in production environments.
+:::
+
+<div class="security-grid">
+  <div class="security-item">
+    <span class="security-icon">🔐</span>
+    <div class="security-content">
+      <strong>Use HTTPS</strong>
+      <p>Always use TLS/SSL in production</p>
+    </div>
+  </div>
+  <div class="security-item">
+    <span class="security-icon">🔑</span>
+    <div class="security-content">
+      <strong>Rotate SECRET_KEY</strong>
+      <p>Change your secret key periodically</p>
+    </div>
+  </div>
+  <div class="security-item">
+    <span class="security-icon">⏱️</span>
+    <div class="security-content">
+      <strong>Short Token Lifetime</strong>
+      <p>Keep access tokens to 15-30 minutes</p>
+    </div>
+  </div>
+  <div class="security-item">
+    <span class="security-icon">🍪</span>
+    <div class="security-content">
+      <strong>Secure Storage</strong>
+      <p>Use httpOnly cookies for refresh tokens</p>
+    </div>
+  </div>
+  <div class="security-item">
+    <span class="security-icon">🚫</span>
+    <div class="security-content">
+      <strong>Token Blacklisting</strong>
+      <p>Invalidate tokens on logout</p>
+    </div>
+  </div>
+  <div class="security-item">
+    <span class="security-icon">💪</span>
+    <div class="security-content">
+      <strong>Strong Passwords</strong>
+      <p>Enforce minimum 8 characters</p>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.auth-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 10px;
+}
+
+.auth-icon {
+  font-size: 1.5rem;
+}
+
+.auth-content h4 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.auth-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--vp-c-text-2);
+}
+
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.security-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 8px;
+}
+
+.security-icon {
+  font-size: 1.25rem;
+}
+
+.security-content strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.security-content p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--vp-c-text-2);
+}
+</style>

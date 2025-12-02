@@ -8,13 +8,14 @@ Import from `app/utils/exceptions.py`:
 
 ```python
 from app.utils.exceptions import (
-    NotFoundException,
-    BadRequestException,
-    UnauthorizedException,
-    ForbiddenException,
-    ConflictException,
-    ValidationException,
-    RateLimitException
+    NotFoundException,          # 404
+    BadRequestException,        # 400
+    UnauthorizedException,      # 401
+    ForbiddenException,         # 403
+    ConflictException,          # 409
+    ValidationException,        # 422
+    RateLimitException,         # 429
+    ServiceUnavailableException # 503
 )
 ```
 
@@ -113,6 +114,30 @@ Rate limit exceeded (429).
 ```python
 if is_rate_limited(client_ip):
     raise RateLimitException("Too many requests")
+```
+
+## ServiceUnavailableException
+
+Service temporarily unavailable (503).
+
+```python
+if not await check_db_connection():
+    raise ServiceUnavailableException("Database unavailable")
+
+if external_service_down:
+    raise ServiceUnavailableException("External service unavailable")
+```
+
+### Response
+
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Database unavailable",
+    "code": "SERVICE_UNAVAILABLE"
+  }
+}
 ```
 
 ## Creating Custom Exceptions

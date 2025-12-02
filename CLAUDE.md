@@ -49,6 +49,31 @@ fastpy make:exception PaymentFailed -s 400               # Custom exception
 fastpy list
 ```
 
+## Global CLI Commands
+
+```bash
+# Project creation
+fastpy new my-project                    # Create new Fastpy project
+fastpy new my-project --branch dev       # From specific branch
+
+# AI-powered code generation
+fastpy ai "Create a blog with posts"     # Natural language generation
+fastpy ai "Add comments to posts" -e     # Execute commands automatically
+
+# Configuration & diagnostics
+fastpy config                            # Show current config
+fastpy config --init                     # Create config file
+fastpy init                              # Initialize Fastpy config
+fastpy doctor                            # Diagnose environment issues
+
+# Utilities
+fastpy version                           # Show CLI version
+fastpy upgrade                           # Update CLI to latest
+fastpy docs                              # Open documentation
+fastpy libs                              # List available facades
+fastpy libs http --usage                 # Show facade usage examples
+```
+
 ## Database Commands
 
 ```bash
@@ -84,6 +109,7 @@ string, text, integer, bigint, float, decimal, money, percent, boolean, datetime
 - `gt:N` - Greater than
 - `lt:N` - Less than
 - `foreign:table.column` - Foreign key
+- `default:value` - Default value
 
 **Examples:**
 ```bash
@@ -154,6 +180,9 @@ All models inherit from `BaseModel` which provides:
 | `/api/auth/refresh` | POST | Refresh access token |
 | `/api/auth/me` | GET | Get current user |
 | `/api/auth/change-password` | POST | Change password |
+| `/api/auth/forgot-password` | POST | Request password reset |
+| `/api/auth/reset-password` | POST | Reset password with token |
+| `/api/auth/verify-email` | POST | Verify email address |
 | `/api/auth/logout` | POST | Logout |
 
 ## Protecting Routes
@@ -186,16 +215,18 @@ return paginated_response(items=users, page=1, per_page=20, total=100)
 
 ```python
 from app.utils.exceptions import (
-    NotFoundException,      # 404
-    BadRequestException,    # 400
-    UnauthorizedException,  # 401
-    ForbiddenException,     # 403
-    ConflictException,      # 409
-    ValidationException,    # 422
-    RateLimitException      # 429
+    NotFoundException,          # 404
+    BadRequestException,        # 400
+    UnauthorizedException,      # 401
+    ForbiddenException,         # 403
+    ConflictException,          # 409
+    ValidationException,        # 422
+    RateLimitException,         # 429
+    ServiceUnavailableException # 503
 )
 
 raise NotFoundException("User not found")
+raise ServiceUnavailableException("Database unavailable")
 ```
 
 ## Middleware
@@ -286,9 +317,9 @@ Key settings in `.env`:
 - `RATE_LIMIT_ENABLED` - Enable rate limiting
 - `LOG_LEVEL` - Logging level (INFO, DEBUG, etc.)
 
-## Fastpy Libs (Laravel-Style Facades)
+## Fastpy Libs
 
-Fastpy provides Laravel-style facades for common tasks. Import from `fastpy_cli.libs`:
+Fastpy provides clean facades for common tasks. Import from `fastpy_cli.libs`:
 
 ```python
 from fastpy_cli.libs import Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt, Job, Notification

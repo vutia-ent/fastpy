@@ -1,6 +1,6 @@
 /**
  * Fastpy Documentation Theme
- * Inspired by Filament PHP's clean, modern aesthetic
+ * Modern, clean, developer-focused design
  */
 
 /* ============================================
@@ -9,6 +9,11 @@
 :root {
   --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   --vp-font-family-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Layout */
+  --vp-layout-max-width: 1440px;
+  --vp-sidebar-width: 272px;
+  --vp-content-width: 752px;
 }
 
 /* ============================================
@@ -287,7 +292,38 @@
 
 .vp-doc a:hover {
   color: var(--vp-c-brand-2);
-  text-decoration: underline;
+}
+
+/* Card links should never have underline */
+.vp-doc a.feature-card,
+.vp-doc a.facade-card,
+.vp-doc a.next-step-card,
+a.VPFeature,
+a[class*="-card"] {
+  text-decoration: none !important;
+}
+
+.vp-doc a.feature-card:hover,
+.vp-doc a.facade-card:hover,
+.vp-doc a.next-step-card:hover,
+a.VPFeature:hover,
+a[class*="-card"]:hover {
+  text-decoration: none !important;
+}
+
+/* Ensure VitePress feature cards don't show underline */
+.VPFeature a,
+.VPFeature .title,
+.VPFeature .details,
+.VPFeature .link-text {
+  text-decoration: none !important;
+}
+
+.VPFeature:hover a,
+.VPFeature:hover .title,
+.VPFeature:hover .details,
+.VPFeature:hover .link-text {
+  text-decoration: none !important;
 }
 
 /* ============================================
@@ -380,6 +416,10 @@ div[class*='language-']:hover .copy {
   overflow: hidden;
   border: 1px solid var(--vp-c-border);
   width: 100%;
+  display: table;
+  table-layout: auto;
+  border-collapse: collapse;
+  margin: 20px 0;
 }
 
 .vp-doc th {
@@ -388,11 +428,16 @@ div[class*='language-']:hover .copy {
   text-align: left;
   padding: 12px 16px;
   border-bottom: 1px solid var(--vp-c-border);
+  white-space: nowrap;
 }
 
 .vp-doc td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--vp-c-border);
+}
+
+.vp-doc td:last-child {
+  width: 100%;
 }
 
 .vp-doc tr:last-child td {
@@ -526,5 +571,448 @@ div[class*='language-']:hover .copy {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ============================================
+   Code Group Tabs
+   ============================================ */
+.vp-code-group .tabs {
+  background: var(--vp-c-bg-soft);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--vp-c-border);
+  border-bottom: none;
+  padding: 8px 12px 0;
+  gap: 4px;
+}
+
+.vp-code-group .tabs button {
+  background: transparent;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  transition: all 0.2s ease;
+}
+
+.vp-code-group .tabs button:hover {
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-bg);
+}
+
+.vp-code-group .tabs button.active {
+  color: var(--vp-c-brand-1);
+  background: #1e293b;
+}
+
+.dark .vp-code-group .tabs {
+  background: #161616;
+  border-color: #2a2a2a;
+}
+
+.dark .vp-code-group .tabs button.active {
+  background: #0f0f0f;
+}
+
+.vp-code-group .blocks {
+  border-radius: 0 0 12px 12px;
+}
+
+.vp-code-group .blocks > div[class*='language-'] {
+  border-radius: 0 0 12px 12px;
+  border-top: none;
+  margin: 0;
+}
+
+/* ============================================
+   Badges & Labels
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge-new {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.badge-beta {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.badge-deprecated {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.badge-required {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.badge-optional {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
+/* ============================================
+   Step Indicators
+   ============================================ */
+.steps {
+  counter-reset: step;
+  padding-left: 0;
+  margin: 24px 0;
+}
+
+.steps > li {
+  position: relative;
+  padding-left: 48px;
+  padding-bottom: 24px;
+  list-style: none;
+  border-left: 2px solid var(--vp-c-border);
+  margin-left: 12px;
+}
+
+.steps > li:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+
+.steps > li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: -13px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  background: var(--vp-c-brand-1);
+  color: #000;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   API Reference Cards
+   ============================================ */
+.api-card {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+  transition: all 0.2s ease;
+}
+
+.api-card:hover {
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.dark .api-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.api-card .method {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+.api-card .method-get { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.api-card .method-post { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.api-card .method-put { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.api-card .method-patch { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+.api-card .method-delete { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+.api-card .endpoint {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--vp-c-text-1);
+}
+
+/* ============================================
+   Grid Layouts
+   ============================================ */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   Feature List with Icons
+   ============================================ */
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--vp-c-border);
+}
+
+.feature-list li:last-child {
+  border-bottom: none;
+}
+
+.feature-list li::before {
+  content: "✓";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Keyboard Shortcuts
+   ============================================ */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 2px 6px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 4px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 2px 0 var(--vp-c-border);
+}
+
+/* ============================================
+   Command Line Output
+   ============================================ */
+.output {
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.output .success { color: #10b981; }
+.output .warning { color: #f59e0b; }
+.output .error { color: #ef4444; }
+.output .info { color: #3b82f6; }
+.output .dim { color: #475569; }
+
+/* ============================================
+   Version Selector
+   ============================================ */
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* ============================================
+   Table of Contents Enhancements
+   ============================================ */
+.VPDocAsideOutline .outline-link {
+  font-size: 0.85rem;
+  color: var(--vp-c-text-2);
+  transition: all 0.15s ease;
+  padding: 4px 0;
+}
+
+.VPDocAsideOutline .outline-link:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.VPDocAsideOutline .outline-link.active {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+/* ============================================
+   Previous/Next Navigation
+   ============================================ */
+.pager-link {
+  border: 1px solid var(--vp-c-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.pager-link:hover {
+  border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-bg-soft);
+}
+
+.pager-link .title {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--vp-c-bg-soft) 25%,
+    var(--vp-c-bg-alt) 50%,
+    var(--vp-c-bg-soft) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================
+   Copy Button Enhancement
+   ============================================ */
+div[class*='language-'] .copy.copied::after {
+  content: "Copied!";
+  position: absolute;
+  right: 100%;
+  margin-right: 8px;
+  padding: 4px 8px;
+  background: var(--vp-c-brand-1);
+  color: #000;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ============================================
+   Enhanced Info Boxes
+   ============================================ */
+.custom-block.details {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-left: 4px solid var(--vp-c-brand-1);
+  border-radius: 8px;
+}
+
+.custom-block.details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-block.details summary::before {
+  content: "▶";
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+}
+
+.custom-block.details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* ============================================
+   Mobile Menu Enhancements
+   ============================================ */
+@media (max-width: 960px) {
+  .VPNavBar .content {
+    padding: 0 16px;
+  }
+
+  .VPNav {
+    padding: 12px 0;
+  }
+
+  .VPSidebar {
+    padding-top: 64px;
+  }
+
+  .VPDoc {
+    padding: 24px 16px;
+  }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+@media print {
+  .VPNav,
+  .VPSidebar,
+  .VPDocAsideOutline,
+  .VPFooter,
+  .pager {
+    display: none !important;
+  }
+
+  .VPDoc {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .vp-doc h1, .vp-doc h2, .vp-doc h3 {
+    page-break-after: avoid;
+  }
+
+  .vp-doc pre, .vp-doc code {
+    white-space: pre-wrap;
   }
 }

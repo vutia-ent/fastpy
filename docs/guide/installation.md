@@ -1,3 +1,12 @@
+---
+title: Installation Guide - Fastpy
+description: Learn how to install Fastpy CLI and set up your FastAPI project with PostgreSQL or MySQL database support.
+head:
+  - - meta
+    - name: keywords
+      content: Fastpy installation, FastAPI setup, Python API setup, pip install fastpy
+---
+
 # Installation
 
 Get Fastpy up and running in your development environment.
