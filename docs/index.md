@@ -1,80 +1,107 @@
 ---
-layout: page
+layout: home
+
+hero:
+  name: Fastpy
+  text: Build APIs at Lightning Speed
+  tagline: Production-ready FastAPI starter with 30+ CLI generators, built-in auth, and everything you need to ship faster.
+  image:
+    src: /logo.svg
+    alt: Fastpy
+  actions:
+    - theme: brand
+      text: Get Started
+      link: /guide/introduction
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/vutia-ent/fastpy
+
+features:
+  - icon: ⚡
+    title: Code Generation
+    details: Generate models, controllers, routes, services, tests, and more with simple CLI commands.
+    link: /commands/overview
+    linkText: Explore Commands
+  - icon: 🔐
+    title: Authentication
+    details: JWT with refresh tokens, password reset, email verification - ready out of the box.
+    link: /api/authentication
+    linkText: View Auth API
+  - icon: 🗃️
+    title: Database Ready
+    details: PostgreSQL or MySQL with SQLModel. Migrations, soft deletes, and timestamps included.
+    link: /guide/configuration
+    linkText: Setup Database
+  - icon: 🤖
+    title: AI-Powered
+    details: Generate resources using natural language with the fastpy ai command.
+    link: /commands/ai
+    linkText: Try AI Generation
+  - icon: 📦
+    title: Built-in Facades
+    details: Http, Mail, Cache, Storage, Queue, Events - clean APIs for common tasks.
+    link: /libs/overview
+    linkText: Browse Libs
+  - icon: 🧪
+    title: Testing Ready
+    details: pytest setup with factories, fixtures, and async support configured.
+    link: /testing/setup
+    linkText: Testing Docs
 ---
 
-<div class="custom-hero">
-  <div class="hero-content">
-    <div class="hero-text">
-      <h1 class="hero-title">Fastpy</h1>
-      <p class="hero-tagline">Build APIs at Lightning Speed</p>
-      <p class="hero-description">The production-ready FastAPI starter with 30+ CLI generators, built-in auth, and everything you need to ship faster.</p>
-      <div class="hero-actions">
-        <a href="/guide/introduction" class="hero-btn primary">Get Started</a>
-        <a href="https://github.com/vutia-ent/fastpy" class="hero-btn secondary">View on GitHub</a>
+<div class="home-content">
+
+<!-- Terminal Demo -->
+<div class="terminal-section">
+  <h2 class="section-title">See It In Action</h2>
+  <div class="terminal">
+    <div class="terminal-header">
+      <div class="terminal-buttons">
+        <span class="terminal-btn close"></span>
+        <span class="terminal-btn minimize"></span>
+        <span class="terminal-btn maximize"></span>
       </div>
-      <div class="tech-badges">
-        <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
-        <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
-        <img src="https://img.shields.io/badge/SQLModel-Latest-red?style=flat" alt="SQLModel">
-      </div>
+      <span class="terminal-title">Terminal</span>
     </div>
-    <div class="hero-terminal">
-      <div class="terminal">
-        <div class="terminal-header">
-          <div class="terminal-buttons">
-            <span class="terminal-btn close"></span>
-            <span class="terminal-btn minimize"></span>
-            <span class="terminal-btn maximize"></span>
-          </div>
-          <span class="terminal-title">Terminal</span>
-        </div>
-        <div class="terminal-body">
-          <div class="terminal-line">
-            <span class="terminal-prompt">$</span>
-            <span class="terminal-command">fastpy make:resource Product -f name:string -f price:decimal -m</span>
-          </div>
-          <div class="terminal-output">
-            <span class="success">✓</span> Created: app/models/product.py
-          </div>
-          <div class="terminal-output">
-            <span class="success">✓</span> Created: app/controllers/product_controller.py
-          </div>
-          <div class="terminal-output">
-            <span class="success">✓</span> Created: app/routes/product_routes.py
-          </div>
-          <div class="terminal-output">
-            <span class="success">✓</span> Created: alembic/versions/001_create_products.py
-          </div>
-          <div class="terminal-output dim">
-            Resource generated in <span class="highlight">0.3s</span>
-          </div>
-        </div>
+    <div class="terminal-body">
+      <div class="terminal-line">
+        <span class="terminal-prompt">$</span>
+        <span class="terminal-command">fastpy make:resource Product -f name:string -f price:decimal -m</span>
+      </div>
+      <div class="terminal-output">
+        <span class="success">✓</span> Created: app/models/product.py
+      </div>
+      <div class="terminal-output">
+        <span class="success">✓</span> Created: app/controllers/product_controller.py
+      </div>
+      <div class="terminal-output">
+        <span class="success">✓</span> Created: app/routes/product_routes.py
+      </div>
+      <div class="terminal-output">
+        <span class="success">✓</span> Created: alembic/versions/001_create_products.py
+      </div>
+      <div class="terminal-output dim">
+        Resource generated in <span class="highlight">0.3s</span>
       </div>
     </div>
   </div>
 </div>
 
-<div class="home-content">
-
 <!-- Stats -->
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-icon">⚡</div>
     <div class="stat-value">30+</div>
     <div class="stat-label">CLI Commands</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">📦</div>
     <div class="stat-value">9</div>
     <div class="stat-label">Built-in Facades</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">🎯</div>
     <div class="stat-value">20+</div>
     <div class="stat-label">Field Types</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">🔒</div>
     <div class="stat-value">JWT</div>
     <div class="stat-label">Auth Ready</div>
   </div>
@@ -86,64 +113,6 @@ layout: page
   <div class="install-command">
     <code>pip install fastpy-cli && fastpy new my-api</code>
     <button class="copy-btn" onclick="navigator.clipboard.writeText('pip install fastpy-cli && fastpy new my-api')">Copy</button>
-  </div>
-</div>
-
-<!-- Features Grid -->
-<h2 class="section-title">Everything You Need</h2>
-<div class="features-grid">
-  <div class="feature-card">
-    <div class="feature-icon-wrap">
-      <span class="feature-icon">⚡</span>
-    </div>
-    <h3>Code Generation</h3>
-    <p>Generate models, controllers, routes, services, tests, and more with simple CLI commands.</p>
-    <a href="/commands/overview" class="feature-link">Explore Commands →</a>
-  </div>
-
-  <div class="feature-card">
-    <div class="feature-icon-wrap">
-      <span class="feature-icon">🔐</span>
-    </div>
-    <h3>Authentication</h3>
-    <p>JWT with refresh tokens, password reset, email verification - ready out of the box.</p>
-    <a href="/api/authentication" class="feature-link">View Auth API →</a>
-  </div>
-
-  <div class="feature-card">
-    <div class="feature-icon-wrap">
-      <span class="feature-icon">🗃️</span>
-    </div>
-    <h3>Database Ready</h3>
-    <p>PostgreSQL or MySQL with SQLModel. Migrations, soft deletes, and timestamps included.</p>
-    <a href="/guide/configuration" class="feature-link">Setup Database →</a>
-  </div>
-
-  <div class="feature-card">
-    <div class="feature-icon-wrap">
-      <span class="feature-icon">🤖</span>
-    </div>
-    <h3>AI-Powered</h3>
-    <p>Generate resources using natural language with the <code>fastpy ai</code> command.</p>
-    <a href="/commands/ai" class="feature-link">Try AI Generation →</a>
-  </div>
-
-  <div class="feature-card">
-    <div class="feature-icon-wrap">
-      <span class="feature-icon">📦</span>
-    </div>
-    <h3>Built-in Facades</h3>
-    <p>Http, Mail, Cache, Storage, Queue, Events - clean APIs for common tasks.</p>
-    <a href="/libs/overview" class="feature-link">Browse Libs →</a>
-  </div>
-
-  <div class="feature-card">
-    <div class="feature-icon-wrap">
-      <span class="feature-icon">🧪</span>
-    </div>
-    <h3>Testing Ready</h3>
-    <p>pytest setup with factories, fixtures, and async support configured.</p>
-    <a href="/testing/setup" class="feature-link">Testing Docs →</a>
   </div>
 </div>
 
@@ -239,10 +208,7 @@ layout: page
   <h2>Ready to Build Faster?</h2>
   <p>Join developers shipping production APIs in record time.</p>
   <div class="cta-buttons">
-    <a href="/guide/introduction" class="cta-btn primary">
-      Get Started
-      <span class="cta-arrow">→</span>
-    </a>
+    <a href="/guide/introduction" class="cta-btn primary">Get Started →</a>
     <a href="/examples/blog" class="cta-btn secondary">View Examples</a>
   </div>
 </div>
@@ -250,132 +216,34 @@ layout: page
 </div>
 
 <style>
-/* Custom Hero */
-.custom-hero {
-  padding: 80px 24px 60px;
-  background: linear-gradient(180deg, var(--vp-c-bg) 0%, var(--vp-c-bg-alt) 100%);
-}
-
-.hero-content {
-  max-width: 1200px;
+/* Home Content Container */
+.home-content {
+  max-width: 1152px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: center;
+  padding: 0 24px 80px;
 }
 
-@media (max-width: 900px) {
-  .hero-content {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    text-align: center;
-  }
-  .hero-terminal {
-    order: -1;
-  }
-  .tech-badges {
-    justify-content: center;
-  }
-}
-
-.hero-title {
-  font-size: 4rem;
-  font-weight: 900;
-  margin: 0 0 12px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.1;
-}
-
-.hero-tagline {
-  font-size: 1.5rem;
-  font-weight: 600;
+/* Section Title */
+.section-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 80px 0 40px;
   color: var(--vp-c-text-1);
-  margin: 0 0 16px;
 }
 
-.hero-description {
-  font-size: 1.1rem;
-  color: var(--vp-c-text-2);
-  line-height: 1.7;
-  margin: 0 0 28px;
-  max-width: 500px;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 900px) {
-  .hero-actions {
-    justify-content: center;
-  }
-  .hero-description {
-    max-width: 100%;
-  }
-}
-
-.hero-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 14px 28px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 1rem;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.hero-btn.primary {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #000;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
-}
-
-.hero-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
-}
-
-.hero-btn.secondary {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-  border: 1px solid var(--vp-c-border);
-}
-
-.hero-btn.secondary:hover {
-  border-color: var(--vp-c-brand-1);
-  color: var(--vp-c-brand-1);
-}
-
-/* Tech Badges */
-.tech-badges {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tech-badges img {
-  height: 22px;
-  border-radius: 4px;
-}
-
-/* Hero Terminal */
-.hero-terminal {
-  width: 100%;
+/* Terminal Section */
+.terminal-section {
+  margin-top: 20px;
 }
 
 .terminal {
+  max-width: 700px;
+  margin: 0 auto;
   background: #0a0a0a;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   border: 1px solid #222;
 }
 
@@ -413,7 +281,7 @@ layout: page
 .terminal-body {
   padding: 20px 24px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   line-height: 1.8;
 }
 
@@ -452,7 +320,7 @@ layout: page
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  margin-bottom: 80px;
+  margin-top: 80px;
 }
 
 @media (max-width: 768px) {
@@ -467,17 +335,12 @@ layout: page
   border-radius: 16px;
   padding: 28px 20px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .stat-card:hover {
   border-color: var(--vp-c-brand-1);
-  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.2);
-}
-
-.stat-icon {
-  font-size: 2rem;
-  margin-bottom: 12px;
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.15);
 }
 
 .stat-value {
@@ -493,23 +356,14 @@ layout: page
 .stat-label {
   font-size: 0.9rem;
   color: var(--vp-c-text-2);
-  margin-top: 4px;
+  margin-top: 8px;
   font-weight: 500;
-}
-
-/* Section Title */
-.section-title {
-  text-align: center;
-  font-size: 2rem;
-  font-weight: 800;
-  margin: 0 0 40px;
-  color: var(--vp-c-text-1);
 }
 
 /* Install Section */
 .install-section {
   max-width: 600px;
-  margin: 0 auto 80px;
+  margin: 0 auto;
 }
 
 .install-command {
@@ -520,7 +374,7 @@ layout: page
   border-radius: 12px;
   padding: 4px 4px 4px 20px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .install-command code {
@@ -537,97 +391,12 @@ layout: page
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .copy-btn:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-/* Features Grid */
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 80px;
-}
-
-@media (max-width: 900px) {
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.feature-card {
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-border);
-  border-radius: 16px;
-  padding: 28px;
-  transition: all 0.3s ease;
-}
-
-.feature-card:hover {
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 8px 24px -8px rgba(245, 158, 11, 0.25);
-}
-
-.dark .feature-card:hover {
-  box-shadow: 0 8px 24px -8px rgba(245, 158, 11, 0.3);
-}
-
-.feature-icon-wrap {
-  width: 48px;
-  height: 48px;
-  background: var(--vp-c-brand-soft);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
-.feature-icon {
-  font-size: 1.5rem;
-}
-
-.feature-card h3 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin: 0 0 10px;
-  color: var(--vp-c-text-1);
-}
-
-.feature-card p {
-  font-size: 0.9rem;
-  color: var(--vp-c-text-2);
-  line-height: 1.6;
-  margin: 0 0 16px;
-}
-
-.feature-card code {
-  background: var(--vp-c-bg-alt);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-.feature-link {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--vp-c-brand-1);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.feature-link:hover {
-  color: var(--vp-c-brand-2);
 }
 
 /* Comparison Section */
@@ -636,7 +405,6 @@ layout: page
   grid-template-columns: 1fr auto 1fr;
   gap: 24px;
   align-items: center;
-  margin-bottom: 80px;
 }
 
 @media (max-width: 768px) {
@@ -645,6 +413,7 @@ layout: page
   }
   .comparison-vs {
     transform: rotate(90deg);
+    margin: 16px 0;
   }
 }
 
@@ -744,7 +513,6 @@ layout: page
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
-  margin-bottom: 80px;
 }
 
 .facade-card {
@@ -754,16 +522,12 @@ layout: page
   padding: 20px 16px;
   text-align: center;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .facade-card:hover {
   border-color: var(--vp-c-brand-1);
-  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.2);
-}
-
-.dark .facade-card:hover {
-  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.15);
 }
 
 .facade-icon {
@@ -793,6 +557,7 @@ layout: page
 .cta-section {
   text-align: center;
   padding: 80px 40px;
+  margin-top: 80px;
   background: linear-gradient(135deg, var(--vp-c-bg-soft) 0%, var(--vp-c-bg-alt) 100%);
   border-radius: 24px;
   border: 1px solid var(--vp-c-border);
@@ -830,7 +595,7 @@ layout: page
   font-weight: 700;
   font-size: 1rem;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .cta-btn.primary {
@@ -853,25 +618,5 @@ layout: page
 .cta-btn.secondary:hover {
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-brand-1);
-}
-
-.cta-arrow {
-  transition: transform 0.2s;
-}
-
-.cta-btn:hover .cta-arrow {
-  transform: translateX(4px);
-}
-
-/* Hero Overrides */
-:root {
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  --vp-home-hero-image-background-image: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.1) 100%);
-  --vp-home-hero-image-filter: blur(72px);
-}
-
-.dark {
-  --vp-home-hero-image-background-image: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.05) 100%);
 }
 </style>
