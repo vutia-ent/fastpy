@@ -510,69 +510,72 @@ features:
 }
 
 /* Facades Grid */
-.facades-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+.home-content .facades-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 20px;
 }
 
 @media (max-width: 768px) {
-  .facades-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .home-content .facades-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 
 @media (max-width: 480px) {
-  .facades-grid {
-    grid-template-columns: 1fr;
+  .home-content .facades-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
-.facade-card {
+.home-content .facade-card {
   background: var(--vp-c-bg-soft);
   border: 1px solid var(--vp-c-border);
   border-radius: 12px;
-  padding: 20px 16px;
+  padding: 24px 16px;
   text-align: center;
   text-decoration: none !important;
   transition: border-color 0.2s, box-shadow 0.2s;
+  display: block;
 }
 
-.facade-card:hover {
+.home-content .facade-card:hover {
   border-color: var(--vp-c-brand-1);
   box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.15);
   text-decoration: none !important;
+  transform: none;
 }
 
-.facade-icon {
-  font-size: 1.75rem;
-  margin-bottom: 10px;
+.home-content .facade-icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
   display: block;
 }
 
-.facade-card * {
+.home-content .facade-card * {
   text-decoration: none !important;
 }
 
-.facade-name {
-  font-size: 1rem;
+.home-content .facade-name {
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--vp-c-text-1);
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
-.facade-card:hover .facade-name {
+.home-content .facade-card:hover .facade-name {
   color: var(--vp-c-text-1);
 }
 
-.facade-example {
-  font-size: 0.7rem;
+.home-content .facade-example {
+  font-size: 0.75rem;
   color: var(--vp-c-brand-1);
   background: var(--vp-c-brand-soft);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   font-family: 'JetBrains Mono', monospace;
+  display: inline-block;
 }
 
 /* CTA Section */
