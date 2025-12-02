@@ -1,3 +1,12 @@
+---
+title: CLI Commands Overview - Fastpy
+description: Explore 30+ CLI commands for generating models, controllers, routes, services, and more. FastCLI automates FastAPI development.
+head:
+  - - meta
+    - name: keywords
+      content: Fastpy CLI, FastAPI code generator, make model, make controller, make route, Python CLI
+---
+
 # CLI Commands Overview
 
 FastCLI is a powerful code generator built into Fastpy. It automates the creation of models, controllers, routes, services, and more.

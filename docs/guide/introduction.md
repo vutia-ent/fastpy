@@ -1,3 +1,12 @@
+---
+title: Introduction to Fastpy - FastAPI Starter Kit
+description: Fastpy is a production-ready FastAPI starter kit with 30+ CLI generators, JWT authentication, and built-in facades for rapid API development.
+head:
+  - - meta
+    - name: keywords
+      content: Fastpy, FastAPI starter kit, Python API framework, REST API boilerplate, FastAPI template
+---
+
 # Introduction
 
 Fastpy is a production-ready FastAPI starter kit that helps you build APIs faster with less boilerplate. It combines the power of FastAPI with battle-tested patterns and a powerful CLI code generator.

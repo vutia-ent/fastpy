@@ -1,3 +1,12 @@
+---
+title: Built-in Facades Overview - Fastpy Libs
+description: Clean facades for HTTP requests, email, caching, storage, queues, events, notifications, hashing, and encryption in your FastAPI projects.
+head:
+  - - meta
+    - name: keywords
+      content: Fastpy libs, FastAPI facades, HTTP client, email sending, caching, file storage, job queues, events, Python facades
+---
+
 # Fastpy Libs
 
 Clean facades for common tasks. Simple, fluent APIs for HTTP requests, email, caching, storage, queues, events, notifications, hashing, and encryption.

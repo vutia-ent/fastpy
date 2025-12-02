@@ -1,3 +1,12 @@
+---
+title: JWT Authentication - Fastpy API Reference
+description: Complete JWT authentication system with access tokens, refresh tokens, password reset, and email verification for your FastAPI application.
+head:
+  - - meta
+    - name: keywords
+      content: JWT authentication, FastAPI auth, access token, refresh token, Python authentication, API security
+---
+
 # Authentication
 
 Fastpy includes a complete JWT authentication system with refresh tokens.

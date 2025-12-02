@@ -292,7 +292,38 @@
 
 .vp-doc a:hover {
   color: var(--vp-c-brand-2);
-  text-decoration: underline;
+}
+
+/* Card links should never have underline */
+.vp-doc a.feature-card,
+.vp-doc a.facade-card,
+.vp-doc a.next-step-card,
+a.VPFeature,
+a[class*="-card"] {
+  text-decoration: none !important;
+}
+
+.vp-doc a.feature-card:hover,
+.vp-doc a.facade-card:hover,
+.vp-doc a.next-step-card:hover,
+a.VPFeature:hover,
+a[class*="-card"]:hover {
+  text-decoration: none !important;
+}
+
+/* Ensure VitePress feature cards don't show underline */
+.VPFeature a,
+.VPFeature .title,
+.VPFeature .details,
+.VPFeature .link-text {
+  text-decoration: none !important;
+}
+
+.VPFeature:hover a,
+.VPFeature:hover .title,
+.VPFeature:hover .details,
+.VPFeature:hover .link-text {
+  text-decoration: none !important;
 }
 
 /* ============================================

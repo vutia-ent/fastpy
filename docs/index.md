@@ -512,8 +512,20 @@ features:
 /* Facades Grid */
 .facades-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .facades-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .facades-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .facade-card {
@@ -522,13 +534,14 @@ features:
   border-radius: 12px;
   padding: 20px 16px;
   text-align: center;
-  text-decoration: none;
+  text-decoration: none !important;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .facade-card:hover {
   border-color: var(--vp-c-brand-1);
   box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.15);
+  text-decoration: none !important;
 }
 
 .facade-icon {
@@ -537,12 +550,20 @@ features:
   display: block;
 }
 
+.facade-card * {
+  text-decoration: none !important;
+}
+
 .facade-name {
   font-size: 1rem;
   font-weight: 700;
   color: var(--vp-c-text-1);
   display: block;
   margin-bottom: 8px;
+}
+
+.facade-card:hover .facade-name {
+  color: var(--vp-c-text-1);
 }
 
 .facade-example {
