@@ -235,6 +235,7 @@ features:
 /* Terminal Section */
 .terminal-section {
   margin-top: 20px;
+  margin-bottom: 80px;
 }
 
 .terminal {
