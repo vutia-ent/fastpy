@@ -110,11 +110,67 @@ features:
 <!-- Quick Install -->
 <h2 class="section-title">Install in Seconds</h2>
 <div class="install-section">
-  <div class="install-command">
-    <code>pip install fastpy-cli && fastpy new my-api</code>
-    <button class="copy-btn" onclick="navigator.clipboard.writeText('pip install fastpy-cli && fastpy new my-api')">Copy</button>
+  <div class="install-box">
+    <div class="install-step">
+      <span class="step-num">1</span>
+      <div class="step-content">
+        <span class="step-label">Install CLI</span>
+        <div class="install-command" data-cmd="pip install fastpy-cli">
+          <code>pip install fastpy-cli</code>
+          <button class="copy-btn" aria-label="Copy command">
+            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="install-step">
+      <span class="step-num">2</span>
+      <div class="step-content">
+        <span class="step-label">Create project</span>
+        <div class="install-command" data-cmd="fastpy new my-api">
+          <code>fastpy new my-api</code>
+          <button class="copy-btn" aria-label="Copy command">
+            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="install-step">
+      <span class="step-num">3</span>
+      <div class="step-content">
+        <span class="step-label">Start building</span>
+        <div class="install-command" data-cmd="fastpy serve">
+          <code>fastpy serve</code>
+          <button class="copy-btn" aria-label="Copy command">
+            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+<script setup>
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  document.querySelectorAll('.install-command .copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cmd = btn.closest('.install-command').dataset.cmd
+      try {
+        await navigator.clipboard.writeText(cmd)
+        btn.classList.add('copied')
+        setTimeout(() => btn.classList.remove('copied'), 2000)
+      } catch (err) {
+        console.error('Failed to copy:', err)
+      }
+    })
+  })
+})
+</script>
 
 <!-- Code Comparison -->
 <h2 class="section-title">Write Less, Ship More</h2>
@@ -363,41 +419,100 @@ features:
 
 /* Install Section */
 .install-section {
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
+}
+
+.install-box {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 16px;
+  padding: 32px;
+}
+
+.install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.install-step:not(:last-child) {
+  border-bottom: 1px solid var(--vp-c-border);
+}
+
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #000;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--vp-c-text-2);
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .install-command {
   display: flex;
   align-items: center;
-  background: var(--vp-c-bg-soft);
-  border: 2px solid var(--vp-c-border);
-  border-radius: 12px;
-  padding: 4px 4px 4px 20px;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 12px 16px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
 }
 
 .install-command code {
   flex: 1;
-  color: var(--vp-c-text-1);
+  color: #e2e8f0;
   background: none;
 }
 
 .copy-btn {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #000;
+  background: transparent;
+  color: #666;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
+  padding: 6px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .copy-btn:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.copy-btn .check-icon {
+  display: none;
+  color: #10b981;
+}
+
+.copy-btn.copied .copy-icon {
+  display: none;
+}
+
+.copy-btn.copied .check-icon {
+  display: block;
 }
 
 /* Comparison Section */
