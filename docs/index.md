@@ -1,74 +1,60 @@
 ---
-layout: home
-
-hero:
-  name: Fastpy
-  text: Build APIs at Lightning Speed
-  tagline: The production-ready FastAPI starter with 30+ CLI generators, built-in auth, and everything you need to ship faster.
-  image:
-    src: /logo.svg
-    alt: Fastpy
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/introduction
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/vutia-ent/fastpy
+layout: page
 ---
 
-<div class="home-content">
-
-<!-- Tech Stack Badges -->
-<div class="tech-badges">
-  <span class="tech-badge">
-    <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
-  </span>
-  <span class="tech-badge">
-    <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
-  </span>
-  <span class="tech-badge">
-    <img src="https://img.shields.io/badge/SQLModel-Latest-red?style=flat" alt="SQLModel">
-  </span>
-  <span class="tech-badge">
-    <img src="https://img.shields.io/badge/PostgreSQL-MySQL-336791?style=flat&logo=postgresql&logoColor=white" alt="Database">
-  </span>
-</div>
-
-<!-- Terminal Demo -->
-<div class="terminal-section">
-  <div class="terminal">
-    <div class="terminal-header">
-      <div class="terminal-buttons">
-        <span class="terminal-btn close"></span>
-        <span class="terminal-btn minimize"></span>
-        <span class="terminal-btn maximize"></span>
+<div class="custom-hero">
+  <div class="hero-content">
+    <div class="hero-text">
+      <h1 class="hero-title">Fastpy</h1>
+      <p class="hero-tagline">Build APIs at Lightning Speed</p>
+      <p class="hero-description">The production-ready FastAPI starter with 30+ CLI generators, built-in auth, and everything you need to ship faster.</p>
+      <div class="hero-actions">
+        <a href="/guide/introduction" class="hero-btn primary">Get Started</a>
+        <a href="https://github.com/vutia-ent/fastpy" class="hero-btn secondary">View on GitHub</a>
       </div>
-      <span class="terminal-title">Terminal</span>
+      <div class="tech-badges">
+        <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
+        <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
+        <img src="https://img.shields.io/badge/SQLModel-Latest-red?style=flat" alt="SQLModel">
+      </div>
     </div>
-    <div class="terminal-body">
-      <div class="terminal-line">
-        <span class="terminal-prompt">$</span>
-        <span class="terminal-command">fastpy make:resource Product -f name:string:required -f price:decimal -m</span>
-      </div>
-      <div class="terminal-output">
-        <span class="success">✓</span> Created: app/models/product.py
-      </div>
-      <div class="terminal-output">
-        <span class="success">✓</span> Created: app/controllers/product_controller.py
-      </div>
-      <div class="terminal-output">
-        <span class="success">✓</span> Created: app/routes/product_routes.py
-      </div>
-      <div class="terminal-output">
-        <span class="success">✓</span> Created: alembic/versions/001_create_products.py
-      </div>
-      <div class="terminal-output dim">
-        <br>Resource generated in <span class="highlight">0.3s</span>
+    <div class="hero-terminal">
+      <div class="terminal">
+        <div class="terminal-header">
+          <div class="terminal-buttons">
+            <span class="terminal-btn close"></span>
+            <span class="terminal-btn minimize"></span>
+            <span class="terminal-btn maximize"></span>
+          </div>
+          <span class="terminal-title">Terminal</span>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-line">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-command">fastpy make:resource Product -f name:string -f price:decimal -m</span>
+          </div>
+          <div class="terminal-output">
+            <span class="success">✓</span> Created: app/models/product.py
+          </div>
+          <div class="terminal-output">
+            <span class="success">✓</span> Created: app/controllers/product_controller.py
+          </div>
+          <div class="terminal-output">
+            <span class="success">✓</span> Created: app/routes/product_routes.py
+          </div>
+          <div class="terminal-output">
+            <span class="success">✓</span> Created: alembic/versions/001_create_products.py
+          </div>
+          <div class="terminal-output dim">
+            Resource generated in <span class="highlight">0.3s</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<div class="home-content">
 
 <!-- Stats -->
 <div class="stats-grid">
@@ -264,31 +250,125 @@ hero:
 </div>
 
 <style>
-/* Home Content Wrapper */
-.home-content {
-  max-width: 1100px;
+/* Custom Hero */
+.custom-hero {
+  padding: 80px 24px 60px;
+  background: linear-gradient(180deg, var(--vp-c-bg) 0%, var(--vp-c-bg-alt) 100%);
+}
+
+.hero-content {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px 80px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+  .hero-terminal {
+    order: -1;
+  }
+  .tech-badges {
+    justify-content: center;
+  }
+}
+
+.hero-title {
+  font-size: 4rem;
+  font-weight: 900;
+  margin: 0 0 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.hero-tagline {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  margin: 0 0 16px;
+}
+
+.hero-description {
+  font-size: 1.1rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.7;
+  margin: 0 0 28px;
+  max-width: 500px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .hero-actions {
+    justify-content: center;
+  }
+  .hero-description {
+    max-width: 100%;
+  }
+}
+
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.hero-btn.primary {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #000;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+}
+
+.hero-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+
+.hero-btn.secondary {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  border: 1px solid var(--vp-c-border);
+}
+
+.hero-btn.secondary:hover {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
 }
 
 /* Tech Badges */
 .tech-badges {
   display: flex;
-  justify-content: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin: -20px 0 48px;
 }
 
-.tech-badge img {
-  height: 24px;
+.tech-badges img {
+  height: 22px;
   border-radius: 4px;
 }
 
-/* Terminal Section */
-.terminal-section {
-  max-width: 700px;
-  margin: 0 auto 64px;
+/* Hero Terminal */
+.hero-terminal {
+  width: 100%;
 }
 
 .terminal {
@@ -391,9 +471,8 @@ hero:
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
   border-color: var(--vp-c-brand-1);
-  box-shadow: 0 20px 40px -15px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.2);
 }
 
 .stat-icon {
@@ -496,12 +575,11 @@ hero:
 
 .feature-card:hover {
   border-color: var(--vp-c-brand-1);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px -8px rgba(245, 158, 11, 0.25);
 }
 
 .dark .feature-card:hover {
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px -8px rgba(245, 158, 11, 0.3);
 }
 
 .feature-icon-wrap {
@@ -681,12 +759,11 @@ hero:
 
 .facade-card:hover {
   border-color: var(--vp-c-brand-1);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.2);
 }
 
 .dark .facade-card:hover {
-  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.25);
 }
 
 .facade-icon {

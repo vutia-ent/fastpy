@@ -385,6 +385,10 @@ div[class*='language-']:hover .copy {
   overflow: hidden;
   border: 1px solid var(--vp-c-border);
   width: 100%;
+  display: table;
+  table-layout: auto;
+  border-collapse: collapse;
+  margin: 20px 0;
 }
 
 .vp-doc th {
@@ -393,11 +397,16 @@ div[class*='language-']:hover .copy {
   text-align: left;
   padding: 12px 16px;
   border-bottom: 1px solid var(--vp-c-border);
+  white-space: nowrap;
 }
 
 .vp-doc td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--vp-c-border);
+}
+
+.vp-doc td:last-child {
+  width: 100%;
 }
 
 .vp-doc tr:last-child td {
