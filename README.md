@@ -9,27 +9,32 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 
 ## Table of Contents
 
-- [Key Features](#-key-features)
-- [Quick Start](#-quick-start)
-- [FastCLI Commands](#-fastcli---code-generation)
-- [API Features](#-api-features)
-- [Architecture](#-architecture)
-- [Authentication](#-authentication)
-- [Testing](#-testing)
-- [Deployment](#-deployment)
-- [Troubleshooting](#-troubleshooting)
+- [Key Features](#key-features)
+- [Quick Start](#quick-start)
+- [FastCLI Commands](#fastcli---code-generation)
+- [API Features](#api-features)
+- [Architecture](#architecture)
+- [Authentication](#authentication)
+- [Testing](#testing)
+- [Fastpy Libs](#fastpy-libs-laravel-style-facades)
+- [Environment Variables](#environment-variables)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Updating](#updating-an-existing-project)
 
 ## Key Features
 
 ### FastCLI - Intelligent Code Generator
-- **20+ Commands**: Models, controllers, routes, services, repositories, middleware, tests, factories, seeders, enums, exceptions
+- **30+ Commands**: Models, controllers, routes, services, repositories, middleware, tests, factories, seeders, enums, exceptions
 - **Field-based generation**: Define models with simple syntax: `title:string:required,max:200`
-- **15+ Field Types**: string, text, integer, float, boolean, datetime, email, url, json, uuid, decimal, money, date, time, phone, slug, ip, color, file, image
+- **20+ Field Types**: string, text, integer, bigint, float, decimal, money, percent, boolean, datetime, date, time, email, url, json, uuid, phone, slug, ip, color, file, image
 - **Automatic validation**: Pydantic rules generated from field definitions
 - **AI Integration**: Generate config files for Claude, Copilot, Gemini, Cursor
+- **AI-Powered Generation**: Natural language resource generation with `fastpy ai`
 - **Interactive mode**: Guided field creation with prompts
 - **Database commands**: Migrate, rollback, fresh, seed
 - **Server management**: Serve, route listing
+- **Laravel-style Facades**: Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt
 
 ### Database & ORM
 - **SQLModel** (SQLAlchemy + Pydantic) for type-safe models
@@ -109,6 +114,20 @@ alembic upgrade head
 # List all commands
 fastpy list
 
+# Global Commands (run anywhere)
+fastpy new my-project             # Create new Fastpy project
+fastpy new my-project --branch dev  # From specific branch
+fastpy ai "Create a blog"         # AI-powered generation
+fastpy ai "Add comments" -e       # Execute automatically
+fastpy config                     # Show current config
+fastpy config --init              # Create config file
+fastpy doctor                     # Diagnose environment
+fastpy version                    # Show CLI version
+fastpy upgrade                    # Update CLI
+fastpy docs                       # Open documentation
+fastpy libs                       # List available facades
+fastpy libs http --usage          # Show facade usage
+
 # Server Management
 fastpy serve                    # Start development server
 fastpy serve --host 0.0.0.0     # Custom host
@@ -143,6 +162,11 @@ fastpy make:exception NotFound    # Custom exception
 fastpy init:ai claude             # Claude Code
 fastpy init:ai copilot            # GitHub Copilot
 fastpy init:ai cursor             # Cursor AI
+
+# Project Updates
+fastpy update --cli               # Update CLI only
+fastpy update --utils             # Update utilities
+fastpy update --all               # Update all files
 ```
 
 ### Field Definition Syntax
@@ -187,6 +211,7 @@ fastpy init:ai cursor             # Cursor AI
 | `gt:N` | Greater than | `age:integer:gt:0` |
 | `lt:N` | Less than | `discount:float:lt:100` |
 | `foreign:table.col` | Foreign key | `user_id:integer:foreign:users.id` |
+| `default:value` | Default value | `status:string:default:active` |
 
 ### Real-World Examples
 
@@ -277,17 +302,19 @@ All API responses follow a consistent format:
 
 ```python
 from app.utils.exceptions import (
-    NotFoundException,      # 404
-    BadRequestException,    # 400
-    UnauthorizedException,  # 401
-    ForbiddenException,     # 403
-    ConflictException,      # 409
-    ValidationException,    # 422
-    RateLimitException      # 429
+    NotFoundException,          # 404
+    BadRequestException,        # 400
+    UnauthorizedException,      # 401
+    ForbiddenException,         # 403
+    ConflictException,          # 409
+    ValidationException,        # 422
+    RateLimitException,         # 429
+    ServiceUnavailableException # 503
 )
 
 raise NotFoundException("User not found")
 raise ConflictException("Email already exists")
+raise ServiceUnavailableException("Database unavailable")
 ```
 
 ## Architecture
@@ -468,6 +495,62 @@ users = UserFactory.build_batch(5)
 admin = UserFactory.build_admin()
 ```
 
+## Fastpy Libs (Laravel-Style Facades)
+
+Fastpy provides Laravel-style facades for common tasks:
+
+```python
+from fastpy_cli.libs import Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt, Job, Notification
+```
+
+| Facade | Description | Drivers |
+|--------|-------------|---------|
+| `Http` | HTTP client with fluent API | - |
+| `Mail` | Email sending | SMTP, SendGrid, Mailgun, SES |
+| `Cache` | Caching system | Memory, File, Redis |
+| `Storage` | File storage | Local, S3, Memory |
+| `Queue` | Job queues | Sync, Redis, Database |
+| `Event` | Event dispatcher | - |
+| `Notify` | Multi-channel notifications | Mail, Database, Slack, SMS |
+| `Hash` | Password hashing | bcrypt, argon2, sha256 |
+| `Crypt` | Data encryption | Fernet, AES-256-CBC |
+
+### Quick Examples
+
+```python
+# HTTP requests
+response = Http.with_token('api-key').get('https://api.example.com/users')
+
+# Caching
+users = Cache.remember('users', 3600, lambda: fetch_users())
+
+# Email
+Mail.to('user@example.com').subject('Welcome!').send('welcome', {'name': 'John'})
+
+# Storage
+Storage.put('avatars/user.jpg', file_content)
+url = Storage.url('avatars/user.jpg')
+
+# Jobs
+Queue.push(SendEmailJob(user_id=1))
+Queue.later(60, ReminderJob(order_id=1))
+
+# Events
+Event.listen('user.registered', lambda data: send_welcome(data))
+Event.dispatch('user.registered', {'user': user})
+
+# Hashing
+hashed = Hash.make('password')
+if Hash.check('password', hashed):
+    print('Valid!')
+
+# Encryption
+encrypted = Crypt.encrypt({'user_id': 123})
+data = Crypt.decrypt(encrypted)
+```
+
+View all facades: `fastpy libs` or `fastpy libs <name> --usage`
+
 ## Environment Variables
 
 ```env
@@ -617,38 +700,45 @@ python -c "from app.database.connection import check_db_connection; import async
 
 To get the latest Fastpy updates in an existing project:
 
-### Update CLI Only (Recommended)
+### Update Using FastCLI (Recommended)
 
-The CLI (`cli.py`) contains all code generators and commands. To update just the CLI:
+Use the built-in update command:
 
 ```bash
-# Download the latest cli.py
-curl -o cli.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/cli.py
+# Update CLI only
+fastpy update --cli
 
-# Or using wget
-wget -O cli.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/cli.py
+# Update utilities (auth, exceptions, responses, pagination)
+fastpy update --utils
+
+# Update specific components
+fastpy update --models      # Base models
+fastpy update --middleware  # Middleware files
+fastpy update --config      # Configuration
+fastpy update --database    # Database connection
+
+# Update everything
+fastpy update --all
 ```
 
-### Update Core Utilities
+### Manual Update (Alternative)
 
-To update the utility files (auth, exceptions, responses, pagination):
+If you prefer manual updates:
 
+**Update Core Utilities:**
 ```bash
-# Update utils
 curl -o app/utils/auth.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/auth.py
 curl -o app/utils/exceptions.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/exceptions.py
 curl -o app/utils/responses.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/responses.py
 curl -o app/utils/pagination.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/utils/pagination.py
 ```
 
-### Update Base Models
-
+**Update Base Models:**
 ```bash
 curl -o app/models/base.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/models/base.py
 ```
 
-### Update Middleware
-
+**Update Middleware:**
 ```bash
 curl -o app/middleware/rate_limit.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/middleware/rate_limit.py
 curl -o app/middleware/request_id.py https://raw.githubusercontent.com/vutia-ent/fastpy/main/app/middleware/request_id.py

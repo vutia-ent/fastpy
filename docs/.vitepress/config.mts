@@ -6,6 +6,9 @@ export default defineConfig({
 
   base: '/',
 
+  cleanUrls: true,
+  lastUpdated: true,
+
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
     /^http:\/\/test/
@@ -20,9 +23,20 @@ export default defineConfig({
     ['meta', { property: 'og:title', content: 'Fastpy - Production-ready FastAPI Starter' }],
     ['meta', { property: 'og:description', content: 'Build FastAPI applications faster with FastCLI code generator, JWT auth, and battle-tested patterns.' }],
     ['meta', { property: 'og:image', content: 'https://vutia-ent.github.io/fastpy/og-image.png' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: 'Fastpy - Production-ready FastAPI Starter' }],
+    ['meta', { name: 'twitter:description', content: 'Build FastAPI applications faster with FastCLI code generator, JWT auth, and battle-tested patterns.' }],
   ],
 
   appearance: 'dark',
+
+  markdown: {
+    lineNumbers: true,
+    theme: {
+      light: 'github-light',
+      dark: 'github-dark'
+    }
+  },
 
   themeConfig: {
     logo: '/logo.svg',
@@ -31,6 +45,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'CLI Commands', link: '/commands/overview' },
+      { text: 'Libs', link: '/libs/overview' },
       { text: 'API Reference', link: '/api/authentication' },
       { text: 'Examples', link: '/examples/blog' },
       {
@@ -114,6 +129,23 @@ export default defineConfig({
           ]
         }
       ],
+      '/libs/': [
+        {
+          text: 'Fastpy Libs',
+          items: [
+            { text: 'Overview', link: '/libs/overview' },
+            { text: 'Http', link: '/libs/http' },
+            { text: 'Cache', link: '/libs/cache' },
+            { text: 'Mail', link: '/libs/mail' },
+            { text: 'Storage', link: '/libs/storage' },
+            { text: 'Queue', link: '/libs/queue' },
+            { text: 'Events', link: '/libs/events' },
+            { text: 'Hash', link: '/libs/hashing' },
+            { text: 'Crypt', link: '/libs/encryption' },
+            { text: 'Notify', link: '/libs/notifications' },
+          ]
+        }
+      ],
       '/testing/': [
         {
           text: 'Testing',
@@ -182,11 +214,45 @@ export default defineConfig({
     },
 
     search: {
-      provider: 'local'
+      provider: 'local',
+      options: {
+        detailedView: true,
+        miniSearch: {
+          searchOptions: {
+            fuzzy: 0.2,
+            prefix: true,
+            boost: {
+              title: 4,
+              text: 2,
+              titles: 1
+            }
+          }
+        }
+      }
     },
 
     outline: {
-      level: [2, 3]
-    }
+      level: [2, 3],
+      label: 'On this page'
+    },
+
+    lastUpdated: {
+      text: 'Updated at',
+      formatOptions: {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }
+    },
+
+    docFooter: {
+      prev: 'Previous',
+      next: 'Next'
+    },
+
+    returnToTopLabel: 'Back to top',
+    sidebarMenuLabel: 'Menu',
+    darkModeSwitchLabel: 'Theme',
+    lightModeSwitchTitle: 'Switch to light mode',
+    darkModeSwitchTitle: 'Switch to dark mode'
   }
 })
