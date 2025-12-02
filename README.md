@@ -16,7 +16,7 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 - [Architecture](#architecture)
 - [Authentication](#authentication)
 - [Testing](#testing)
-- [Fastpy Libs](#fastpy-libs-laravel-style-facades)
+- [Fastpy Libs](#fastpy-libs)
 - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
@@ -34,7 +34,7 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 - **Interactive mode**: Guided field creation with prompts
 - **Database commands**: Migrate, rollback, fresh, seed
 - **Server management**: Serve, route listing
-- **Laravel-style Facades**: Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt
+- **Built-in Facades**: Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt
 
 ### Database & ORM
 - **SQLModel** (SQLAlchemy + Pydantic) for type-safe models
@@ -495,9 +495,9 @@ users = UserFactory.build_batch(5)
 admin = UserFactory.build_admin()
 ```
 
-## Fastpy Libs (Laravel-Style Facades)
+## Fastpy Libs
 
-Fastpy provides Laravel-style facades for common tasks:
+Fastpy provides clean facades for common tasks:
 
 ```python
 from fastpy_cli.libs import Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt, Job, Notification

@@ -317,9 +317,9 @@ Key settings in `.env`:
 - `RATE_LIMIT_ENABLED` - Enable rate limiting
 - `LOG_LEVEL` - Logging level (INFO, DEBUG, etc.)
 
-## Fastpy Libs (Laravel-Style Facades)
+## Fastpy Libs
 
-Fastpy provides Laravel-style facades for common tasks. Import from `fastpy_cli.libs`:
+Fastpy provides clean facades for common tasks. Import from `fastpy_cli.libs`:
 
 ```python
 from fastpy_cli.libs import Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt, Job, Notification

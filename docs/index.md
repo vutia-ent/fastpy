@@ -41,7 +41,7 @@ features:
     link: /architecture/patterns
     linkText: Learn Patterns
   - icon: 📦
-    title: Laravel-Style Facades
+    title: Built-in Facades
     details: Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt - familiar facades for common tasks.
     link: /libs/overview
     linkText: Browse Libs

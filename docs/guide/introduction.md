@@ -47,7 +47,7 @@ By the end of this guide, you'll have a complete REST API with authentication, d
   <div class="feature-card">
     <div class="feature-icon">📦</div>
     <div class="feature-content">
-      <h4>Laravel-Style Facades</h4>
+      <h4>Built-in Facades</h4>
       <p>Http, Mail, Cache, Storage, Queue, and more</p>
     </div>
   </div>

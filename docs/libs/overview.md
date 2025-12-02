@@ -1,6 +1,6 @@
 # Fastpy Libs
 
-Laravel-style facades for common tasks. Simple, fluent APIs for HTTP requests, email, caching, storage, queues, events, notifications, hashing, and encryption.
+Clean facades for common tasks. Simple, fluent APIs for HTTP requests, email, caching, storage, queues, events, notifications, hashing, and encryption.
 
 ::: tip Why Facades?
 Facades provide a simple, testable interface to complex underlying services. Import once, use everywhere with a consistent API.
