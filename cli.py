@@ -562,6 +562,7 @@ class {controller_name}:
 def make_route(
     name: str = typer.Argument(..., help="Route name (e.g., BlogPost)"),
     protected: bool = typer.Option(False, "--protected", "-p", help="Add authentication"),
+    binding: bool = typer.Option(False, "--binding", "-b", help="Use route model binding"),
 ):
     """Create a new route file with all CRUD endpoints"""
     model_name = to_pascal_case(name)
@@ -569,6 +570,7 @@ def make_route(
     file_name = to_snake_case(name) + "_routes.py"
     file_path = Path(f"app/routes/{file_name}")
     route_prefix = pluralize(to_snake_case(name))
+    snake_name = to_snake_case(name)
 
     if file_path.exists():
         console.print(f"[red]Route already exists:[/red] {file_path}")
@@ -581,14 +583,17 @@ def make_route(
         auth_import = "\nfrom app.utils.auth import get_current_active_user\nfrom app.models.user import User"
         auth_dep = ", current_user: User = Depends(get_current_active_user)"
 
-    route_template = f'''from typing import List, Optional, Dict, Any
+    # Route model binding template
+    if binding:
+        binding_import = "\nfrom app.utils.binding import bind, bind_or_fail, bind_trashed"
+        route_template = f'''from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_session
-from app.controllers.{to_snake_case(name)}_controller import {controller_name}
-from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
-from app.config.settings import settings{auth_import}
+from app.controllers.{snake_name}_controller import {controller_name}
+from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
+from app.config.settings import settings{auth_import}{binding_import}
 
 router = APIRouter()
 
@@ -599,7 +604,7 @@ async def get_all(
     limit: int = Query(100, ge=1, le=1000),
     session: AsyncSession = Depends(get_session){auth_dep}
 ):
-    """Get all {to_snake_case(name)}s"""
+    """Get all {snake_name}s"""
     return await {controller_name}.get_all(session, skip, limit)
 
 
@@ -611,7 +616,138 @@ async def get_paginated(
     sort_order: str = Query("asc", pattern="^(asc|desc)$"),
     session: AsyncSession = Depends(get_session){auth_dep}
 ) -> Dict[str, Any]:
-    """Get paginated {to_snake_case(name)}s with sorting"""
+    """Get paginated {snake_name}s with sorting"""
+    result = await {controller_name}.get_paginated(session, page, per_page, sort_by, sort_order)
+    return {{
+        "data": result.items,
+        "pagination": {{
+            "page": result.page,
+            "per_page": result.per_page,
+            "total": result.total,
+            "pages": result.pages,
+            "has_next": result.has_next,
+            "has_prev": result.has_prev
+        }}
+    }}
+
+
+@router.get("/count")
+async def count(session: AsyncSession = Depends(get_session){auth_dep}) -> Dict[str, int]:
+    """Get total count"""
+    count = await {controller_name}.count(session)
+    return {{"count": count}}
+
+
+@router.get("/{{id}}", response_model={model_name}Read)
+async def get_one({snake_name}: {model_name} = bind_or_fail({model_name}){auth_dep}):
+    """Get {snake_name} by ID (auto-resolved via route model binding)"""
+    return {snake_name}
+
+
+@router.head("/{{id}}", status_code=status.HTTP_200_OK)
+async def check_exists({snake_name}: {model_name} = bind({model_name}){auth_dep}):
+    """Check if {snake_name} exists"""
+    if not {snake_name}:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="{model_name} not found")
+    return None
+
+
+@router.post("/", response_model={model_name}Read, status_code=201)
+async def create(data: {model_name}Create, session: AsyncSession = Depends(get_session){auth_dep}):
+    """Create a new {snake_name}"""
+    return await {controller_name}.create(session, data)
+
+
+@router.put("/{{id}}", response_model={model_name}Read)
+async def update(
+    data: {model_name}Update,
+    {snake_name}: {model_name} = bind_or_fail({model_name}),
+    session: AsyncSession = Depends(get_session){auth_dep}
+):
+    """Full update a {snake_name} (auto-resolved via route model binding)"""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr({snake_name}, field, value)
+    {snake_name}.touch()
+    session.add({snake_name})
+    await session.flush()
+    await session.refresh({snake_name})
+    return {snake_name}
+
+
+@router.patch("/{{id}}", response_model={model_name}Read)
+async def partial_update(
+    data: {model_name}Update,
+    {snake_name}: {model_name} = bind_or_fail({model_name}),
+    session: AsyncSession = Depends(get_session){auth_dep}
+):
+    """Partial update a {snake_name} (auto-resolved via route model binding)"""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr({snake_name}, field, value)
+    {snake_name}.touch()
+    session.add({snake_name})
+    await session.flush()
+    await session.refresh({snake_name})
+    return {snake_name}
+
+
+@router.delete("/{{id}}")
+async def delete(
+    {snake_name}: {model_name} = bind_or_fail({model_name}),
+    session: AsyncSession = Depends(get_session){auth_dep}
+):
+    """Soft delete a {snake_name} (auto-resolved via route model binding)"""
+    {snake_name}.soft_delete()
+    session.add({snake_name})
+    await session.flush()
+    return {{"message": "{model_name} deleted successfully"}}
+
+
+@router.post("/{{id}}/restore", response_model={model_name}Read)
+async def restore(
+    {snake_name}: {model_name} = bind_trashed({model_name}),
+    session: AsyncSession = Depends(get_session){auth_dep}
+):
+    """Restore a soft deleted {snake_name} (includes trashed records)"""
+    {snake_name}.restore()
+    session.add({snake_name})
+    await session.flush()
+    await session.refresh({snake_name})
+    return {snake_name}
+'''
+    else:
+        # Standard template without binding
+        route_template = f'''from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.connection import get_session
+from app.controllers.{snake_name}_controller import {controller_name}
+from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
+from app.config.settings import settings{auth_import}
+
+router = APIRouter()
+
+
+@router.get("/", response_model=List[{model_name}Read])
+async def get_all(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    session: AsyncSession = Depends(get_session){auth_dep}
+):
+    """Get all {snake_name}s"""
+    return await {controller_name}.get_all(session, skip, limit)
+
+
+@router.get("/paginated")
+async def get_paginated(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
+    session: AsyncSession = Depends(get_session){auth_dep}
+) -> Dict[str, Any]:
+    """Get paginated {snake_name}s with sorting"""
     result = await {controller_name}.get_paginated(session, page, per_page, sort_by, sort_order)
     return {{
         "data": result.items,
@@ -635,13 +771,13 @@ async def count(session: AsyncSession = Depends(get_session){auth_dep}) -> Dict[
 
 @router.get("/{{id}}", response_model={model_name}Read)
 async def get_one(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Get {to_snake_case(name)} by ID"""
+    """Get {snake_name} by ID"""
     return await {controller_name}.get_by_id(session, id)
 
 
 @router.head("/{{id}}", status_code=status.HTTP_200_OK)
 async def check_exists(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Check if {to_snake_case(name)} exists"""
+    """Check if {snake_name} exists"""
     exists = await {controller_name}.exists(session, id)
     if not exists:
         from fastapi import HTTPException
@@ -651,7 +787,7 @@ async def check_exists(id: int, session: AsyncSession = Depends(get_session){aut
 
 @router.post("/", response_model={model_name}Read, status_code=201)
 async def create(data: {model_name}Create, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Create a new {to_snake_case(name)}"""
+    """Create a new {snake_name}"""
     return await {controller_name}.create(session, data)
 
 
@@ -659,7 +795,7 @@ async def create(data: {model_name}Create, session: AsyncSession = Depends(get_s
 async def update(
     id: int, data: {model_name}Update, session: AsyncSession = Depends(get_session){auth_dep}
 ):
-    """Full update a {to_snake_case(name)}"""
+    """Full update a {snake_name}"""
     return await {controller_name}.update(session, id, data)
 
 
@@ -667,19 +803,19 @@ async def update(
 async def partial_update(
     id: int, data: {model_name}Update, session: AsyncSession = Depends(get_session){auth_dep}
 ):
-    """Partial update a {to_snake_case(name)}"""
+    """Partial update a {snake_name}"""
     return await {controller_name}.update(session, id, data)
 
 
 @router.delete("/{{id}}")
 async def delete(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Soft delete a {to_snake_case(name)}"""
+    """Soft delete a {snake_name}"""
     return await {controller_name}.delete(session, id)
 
 
 @router.post("/{{id}}/restore", response_model={model_name}Read)
 async def restore(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Restore a soft deleted {to_snake_case(name)}"""
+    """Restore a soft deleted {snake_name}"""
     return await {controller_name}.restore(session, id)
 '''
 
@@ -688,6 +824,9 @@ async def restore(id: int, session: AsyncSession = Depends(get_session){auth_dep
 
     if protected:
         console.print("[cyan]Routes are protected with authentication[/cyan]")
+
+    if binding:
+        console.print("[cyan]Routes use route model binding (auto-resolve models from route params)[/cyan]")
 
     console.print("\n[yellow]Add to main.py:[/yellow]")
     console.print(
@@ -710,6 +849,7 @@ def make_resource(
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive mode"),
     migration: bool = typer.Option(False, "--migration", "-m", help="Create migration"),
     protected: bool = typer.Option(False, "--protected", "-p", help="Add authentication"),
+    binding: bool = typer.Option(False, "--binding", "-b", help="Use route model binding"),
 ):
     """Create model, controller, and routes all at once"""
     console.print(f"[cyan]Creating resource:[/cyan] {name}\n")
@@ -727,7 +867,7 @@ def make_resource(
             make_model(name, fields=None, interactive=False, migration=False)
 
     make_controller(name)
-    make_route(name, protected=protected)
+    make_route(name, protected=protected, binding=binding)
 
     if migration:
         table_name = pluralize(to_snake_case(name))
@@ -1745,13 +1885,18 @@ fastpy route:list
 # Generate complete resource (model + controller + routes)
 fastpy make:resource Post -f title:string:required,max:200 -f body:text:required -m -p
 
+# With route model binding (auto-resolve models from route params)
+fastpy make:resource Post -f title:string:required -m -p --binding
+
 # Individual generators
 fastpy make:model Post -f title:string:required -m      # Model + migration
 fastpy make:controller Post                              # Controller
 fastpy make:route Post --protected                       # Routes (with auth)
+fastpy make:route Post --protected --binding             # Routes with model binding
 fastpy make:service Post                                 # Service class
 fastpy make:repository Post                              # Repository class
 fastpy make:middleware Logging                           # Middleware
+fastpy make:request CreatePost -f title:required -f body:required  # Form request
 fastpy make:test Post                                    # Test file
 fastpy make:factory Post                                 # Test factory
 fastpy make:seeder Post                                  # Database seeder
@@ -1760,6 +1905,31 @@ fastpy make:exception PaymentFailed -s 400               # Custom exception
 
 # List all commands
 fastpy list
+```
+
+## Global CLI Commands
+
+```bash
+# Project creation
+fastpy new my-project                    # Create new Fastpy project
+fastpy new my-project --branch dev       # From specific branch
+
+# AI-powered code generation
+fastpy ai "Create a blog with posts"     # Natural language generation
+fastpy ai "Add comments to posts" -e     # Execute commands automatically
+
+# Configuration & diagnostics
+fastpy config                            # Show current config
+fastpy config --init                     # Create config file
+fastpy init                              # Initialize Fastpy config
+fastpy doctor                            # Diagnose environment issues
+
+# Utilities
+fastpy version                           # Show CLI version
+fastpy upgrade                           # Update CLI to latest
+fastpy docs                              # Open documentation
+fastpy libs                              # List available facades
+fastpy libs http --usage                 # Show facade usage examples
 ```
 
 ## Database Commands
@@ -1776,6 +1946,49 @@ fastpy db:seed --seeder User --count 50   # Run specific seeder
 alembic revision --autogenerate -m "Add posts table"
 alembic upgrade head
 alembic downgrade -1
+```
+
+## Deployment Commands
+
+```bash
+# Initialize deployment configuration
+fastpy deploy:init                        # Interactive setup wizard
+
+# Nginx configuration
+fastpy deploy:nginx                       # Generate and install nginx config
+
+# SSL certificates (Let's Encrypt)
+fastpy deploy:ssl                         # Obtain SSL certificate for domain
+
+# Process managers (choose one)
+fastpy deploy:systemd                     # Configure systemd service
+fastpy deploy:pm2                         # Configure PM2 (ecosystem.config.js)
+fastpy deploy:supervisor                  # Configure Supervisor
+
+# Full deployment (runs all steps)
+fastpy deploy:run                         # Deploy with configured process manager
+
+# Status and diagnostics
+fastpy deploy:status                      # Show deployment status
+fastpy deploy:check                       # Check server requirements
+fastpy deploy:install                     # Install missing requirements
+
+# Domain management
+fastpy domain:add example.com             # Add domain to CORS whitelist
+fastpy domain:remove example.com          # Remove domain
+fastpy domain:list                        # List all domains
+
+# Environment variables
+fastpy env:set KEY value                  # Set environment variable
+fastpy env:get KEY                        # Get environment variable
+fastpy env:list                           # List all env variables
+
+# Service control
+fastpy service:start                      # Start application
+fastpy service:stop                       # Stop application
+fastpy service:restart                    # Restart application
+fastpy service:status                     # Show service status
+fastpy service:logs                       # View application logs
 ```
 
 ## Field Definition Syntax
@@ -1797,6 +2010,7 @@ string, text, integer, bigint, float, decimal, money, percent, boolean, datetime
 - `gt:N` - Greater than
 - `lt:N` - Less than
 - `foreign:table.column` - Foreign key
+- `default:value` - Default value
 
 **Examples:**
 ```bash
@@ -1820,12 +2034,15 @@ app/
 │   ├── timing.py       # X-Response-Time header
 │   └── rate_limit.py   # Sliding window rate limiting
 ├── models/           # SQLModel models with Pydantic schemas
+│   ├── base.py         # BaseModel with Active Record methods
+│   └── concerns/       # Laravel-style model traits
 ├── repositories/     # Data access layer (BaseRepository)
 ├── routes/           # API route definitions
 ├── seeders/          # Database seeders
 ├── services/         # Business logic services (BaseService)
 └── utils/
     ├── auth.py         # JWT & password hashing
+    ├── binding.py      # Route model binding
     ├── exceptions.py   # Custom exceptions
     ├── logger.py       # Structured logging
     ├── pagination.py   # Pagination utilities
@@ -1857,6 +2074,216 @@ All models inherit from `BaseModel` which provides:
 - `is_deleted` - Property to check if deleted
 - `touch()` - Update timestamps
 
+### Active Record Methods
+
+```python
+# Create
+user = await User.create(name="John", email="john@example.com")
+
+# Find
+user = await User.find(1)                          # Returns None if not found
+user = await User.find_or_fail(1)                  # Raises NotFoundException
+
+# Query
+users = await User.where(active=True)              # List of matching records
+user = await User.first_where(email="john@example.com")
+user = await User.first_or_fail(email="john@example.com")
+
+# Update
+user.name = "Jane"
+await user.save()
+
+await user.update(name="Jane", email="jane@example.com")
+
+# Delete
+await user.delete()              # Soft delete
+await user.delete(force=True)    # Hard delete
+```
+
+## Model Concerns (Laravel-style Traits)
+
+Mix in Laravel-style functionality to your models:
+
+```python
+from app.models.base import BaseModel
+from app.models.concerns import (
+    HasCasts, HasAttributes, HasEvents, HasScopes, GuardsAttributes
+)
+
+class Post(BaseModel, HasCasts, HasAttributes, HasEvents, HasScopes, GuardsAttributes, table=True):
+    # ... model definition
+```
+
+### Attribute Casting
+
+Auto-convert database values to Python types:
+
+```python
+class Post(BaseModel, HasCasts, table=True):
+    _casts = {
+        'settings': 'json',        # JSON string <-> dict
+        'is_active': 'boolean',    # 1/0 <-> True/False
+        'metadata': 'dict',        # Ensure dict type
+        'tags': 'list',            # Ensure list type
+        'price': 'decimal:2',      # Decimal with 2 places
+        'published_at': 'datetime',
+    }
+
+# Usage
+post.settings = {'featured': True}  # Stored as JSON string
+print(post.settings)                 # Returns dict: {'featured': True}
+```
+
+**Available cast types:** `boolean`, `integer`, `float`, `string`, `json`, `dict`, `list`, `date`, `datetime`, `decimal:N`
+
+### Accessors and Mutators
+
+Computed properties and value transformers:
+
+```python
+from app.models.concerns import accessor, mutator
+
+class User(BaseModel, HasAttributes, table=True):
+    first_name: str
+    last_name: str
+    password: str
+
+    # Virtual attributes to include in serialization
+    _appends = ['full_name']
+    _hidden = ['password']
+
+    @accessor
+    def full_name(self) -> str:
+        """Computed property."""
+        return f"{self.first_name} {self.last_name}"
+
+    @mutator('password')
+    def hash_password(self, value: str) -> str:
+        """Transform value before storing."""
+        from app.utils.auth import get_password_hash
+        return get_password_hash(value)
+
+# Usage
+user.full_name          # "John Doe"
+user.password = "secret" # Automatically hashed
+user.to_dict()          # Includes full_name, excludes password
+```
+
+### Model Events
+
+Hook into model lifecycle:
+
+```python
+from app.models.concerns import HasEvents, ModelObserver
+
+class UserObserver(ModelObserver):
+    def creating(self, user):
+        user.uuid = str(uuid4())
+
+    def created(self, user):
+        send_welcome_email(user)
+
+    def deleting(self, user):
+        # Return False to cancel deletion
+        if user.is_admin:
+            return False
+        return True
+
+class User(BaseModel, HasEvents, table=True):
+    @classmethod
+    def booted(cls):
+        cls.observe(UserObserver())
+
+        # Or inline handlers:
+        cls.creating(lambda u: setattr(u, 'uuid', str(uuid4())))
+```
+
+**Events:** `creating`, `created`, `updating`, `updated`, `saving`, `saved`, `deleting`, `deleted`, `restoring`, `restored`
+
+### Query Scopes
+
+Reusable query constraints:
+
+```python
+class Post(BaseModel, HasScopes, table=True):
+    @classmethod
+    def scope_published(cls, query):
+        return query.where(cls.is_published == True)
+
+    @classmethod
+    def scope_popular(cls, query, min_views: int = 1000):
+        return query.where(cls.views >= min_views)
+
+    @classmethod
+    def scope_by_author(cls, query, author_id: int):
+        return query.where(cls.author_id == author_id)
+
+# Fluent query building
+posts = await Post.query().published().popular(5000).latest().get()
+posts = await Post.query().by_author(1).paginate(page=2, per_page=20)
+
+# With soft deletes
+posts = await Post.query().with_trashed().get()   # Include deleted
+posts = await Post.query().only_trashed().get()   # Only deleted
+```
+
+**QueryBuilder methods:** `where()`, `where_in()`, `where_null()`, `order_by()`, `latest()`, `oldest()`, `limit()`, `offset()`, `get()`, `first()`, `count()`, `exists()`, `paginate()`
+
+### Mass Assignment Protection
+
+Protect against mass assignment vulnerabilities:
+
+```python
+class User(BaseModel, GuardsAttributes, table=True):
+    # Whitelist: only these can be mass-assigned
+    _fillable = ['name', 'email', 'password']
+
+    # OR blacklist: everything except these
+    _guarded = ['is_admin', 'role']
+
+# Safe mass assignment
+user = await User.create(**request.validated_data)  # Only fillable fields
+user.fill(name="John", is_admin=True)               # is_admin ignored
+
+# Bypass protection when needed
+user.force_fill(is_admin=True)
+
+# Temporarily disable protection
+from app.models.concerns import Unguarded
+with Unguarded(User):
+    await User.create(is_admin=True)
+```
+
+## Route Model Binding
+
+Auto-resolve route parameters to model instances:
+
+```python
+from app.utils.binding import bind, bind_or_fail, bind_trashed
+
+@router.get("/users/{id}")
+async def show_user(user: User = bind(User)):
+    return user  # Automatically fetched by ID
+
+@router.get("/posts/{slug}")
+async def show_post(post: Post = bind(Post, param="slug", field="slug")):
+    return post  # Fetched by slug field
+
+@router.put("/users/{id}")
+async def update_user(
+    user: User = bind_or_fail(User),
+    request: UpdateUserRequest = validated(UpdateUserRequest)
+):
+    await user.update(**request.validated_data)
+    return user
+
+# Include soft-deleted records
+@router.post("/posts/{id}/restore")
+async def restore_post(post: Post = bind_trashed(Post)):
+    await post.restore()
+    return post
+```
+
 ## Authentication Endpoints
 
 | Endpoint | Method | Description |
@@ -1867,6 +2294,9 @@ All models inherit from `BaseModel` which provides:
 | `/api/auth/refresh` | POST | Refresh access token |
 | `/api/auth/me` | GET | Get current user |
 | `/api/auth/change-password` | POST | Change password |
+| `/api/auth/forgot-password` | POST | Request password reset |
+| `/api/auth/reset-password` | POST | Reset password with token |
+| `/api/auth/verify-email` | POST | Verify email address |
 | `/api/auth/logout` | POST | Logout |
 
 ## Protecting Routes
@@ -1899,16 +2329,18 @@ return paginated_response(items=users, page=1, per_page=20, total=100)
 
 ```python
 from app.utils.exceptions import (
-    NotFoundException,      # 404
-    BadRequestException,    # 400
-    UnauthorizedException,  # 401
-    ForbiddenException,     # 403
-    ConflictException,      # 409
-    ValidationException,    # 422
-    RateLimitException      # 429
+    NotFoundException,          # 404
+    BadRequestException,        # 400
+    UnauthorizedException,      # 401
+    ForbiddenException,         # 403
+    ConflictException,          # 409
+    ValidationException,        # 422
+    RateLimitException,         # 429
+    ServiceUnavailableException # 503
 )
 
 raise NotFoundException("User not found")
+raise ServiceUnavailableException("Database unavailable")
 ```
 
 ## Middleware
@@ -1999,9 +2431,9 @@ Key settings in `.env`:
 - `RATE_LIMIT_ENABLED` - Enable rate limiting
 - `LOG_LEVEL` - Logging level (INFO, DEBUG, etc.)
 
-## Fastpy Libs (Laravel-Style Facades)
+## Fastpy Libs
 
-Fastpy provides Laravel-style facades for common tasks. Import from `fastpy_cli.libs`:
+Fastpy provides clean facades for common tasks. Import from `fastpy_cli.libs`:
 
 ```python
 from fastpy_cli.libs import Http, Mail, Cache, Storage, Queue, Event, Notify, Hash, Crypt, Job, Notification
