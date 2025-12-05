@@ -124,6 +124,8 @@ export default defineConfig({
           text: 'Architecture',
           items: [
             { text: 'Project Structure', link: '/architecture/structure' },
+            { text: 'Models & Concerns', link: '/architecture/models' },
+            { text: 'Route Model Binding', link: '/architecture/binding' },
             { text: 'Patterns', link: '/architecture/patterns' },
             { text: 'Middleware', link: '/architecture/middleware' },
           ]
@@ -143,6 +145,8 @@ export default defineConfig({
           text: 'Architecture',
           items: [
             { text: 'Project Structure', link: '/architecture/structure' },
+            { text: 'Models & Concerns', link: '/architecture/models' },
+            { text: 'Route Model Binding', link: '/architecture/binding' },
             { text: 'Patterns', link: '/architecture/patterns' },
             { text: 'Middleware', link: '/architecture/middleware' },
           ]
@@ -157,6 +161,13 @@ export default defineConfig({
             { text: 'Database Commands', link: '/commands/database' },
             { text: 'Make Commands', link: '/commands/make' },
             { text: 'AI Commands', link: '/commands/ai' },
+          ]
+        },
+        {
+          text: 'Deployment',
+          items: [
+            { text: 'Production', link: '/deployment/production' },
+            { text: 'Docker', link: '/deployment/docker' },
           ]
         },
         {

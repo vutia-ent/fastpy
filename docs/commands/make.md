@@ -13,6 +13,17 @@ fastpy make:resource Post \
   -m -p
 ```
 
+### With Route Model Binding
+
+Use `--binding` to generate routes that auto-resolve models from route parameters:
+
+```bash
+fastpy make:resource Post \
+  -f title:string:required \
+  -f body:text:required \
+  -m -p --binding
+```
+
 ### Options
 
 | Option | Description |
@@ -20,6 +31,7 @@ fastpy make:resource Post \
 | `-f, --field` | Field definition (repeatable) |
 | `-m, --migration` | Generate migration |
 | `-p, --protected` | Require authentication |
+| `-b, --binding` | Use route model binding |
 | `-i, --interactive` | Interactive mode |
 
 ### Generated Files
@@ -120,13 +132,22 @@ Generate route definitions.
 fastpy make:route Post --protected
 ```
 
+### With Route Model Binding
+
+Use `--binding` to generate routes that auto-resolve models from route parameters:
+
+```bash
+fastpy make:route Post --protected --binding
+```
+
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--protected` | Require authentication |
+| `-p, --protected` | Require authentication |
+| `-b, --binding` | Use route model binding |
 
-### Generated Code
+### Generated Code (Standard)
 
 ```python
 from fastapi import APIRouter, Depends
@@ -145,6 +166,44 @@ async def list_posts(
 ):
     posts = await PostController.get_all(session)
     return success_response(data=posts)
+```
+
+### Generated Code (With Binding)
+
+When using `--binding`, routes auto-resolve models:
+
+```python
+from fastapi import APIRouter, Depends
+from app.utils.binding import bind_or_fail, bind_trashed
+from app.models.post import Post, PostUpdate
+
+router = APIRouter()
+
+@router.get("/{id}")
+async def show(post: Post = bind_or_fail(Post)):
+    """Model is automatically fetched by ID"""
+    return post
+
+@router.put("/{id}")
+async def update(
+    data: PostUpdate,
+    post: Post = bind_or_fail(Post),
+    session: AsyncSession = Depends(get_session)
+):
+    """Model is auto-resolved, just update it"""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(post, field, value)
+    post.touch()
+    session.add(post)
+    await session.flush()
+    await session.refresh(post)
+    return post
+
+@router.post("/{id}/restore")
+async def restore(post: Post = bind_trashed(Post)):
+    """Can find soft-deleted records for restoration"""
+    post.restore()
+    return post
 ```
 
 ## make:service
