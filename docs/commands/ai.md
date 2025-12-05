@@ -2,41 +2,57 @@
 
 Fastpy includes AI-powered resource generation and configuration generators for popular AI coding assistants.
 
-## AI-Powered Resource Generation
+## ai:config
 
-Generate complete resources using natural language descriptions.
-
-```bash
-fastpy ai "Create a blog with posts, categories, and tags"
-```
-
-### Configuration
-
-Set up your preferred AI provider:
+Configure your AI provider for code generation.
 
 ```bash
-# Set provider (anthropic, openai, or ollama)
-export FASTPY_AI_PROVIDER=anthropic
+# Show current configuration and available providers
+fastpy ai:config
 
-# Set API key for your provider
-export ANTHROPIC_API_KEY=your-api-key-here
-# or
-export OPENAI_API_KEY=your-api-key-here
+# Set AI provider
+fastpy ai:config -p anthropic
+fastpy ai:config -p openai
+fastpy ai:config -p ollama
+
+# Test your connection
+fastpy ai:config --test
 ```
-
-::: tip Getting API Keys
-- **Anthropic (Claude)**: Get your key at [console.anthropic.com](https://console.anthropic.com/)
-- **OpenAI (GPT-4)**: Get your key at [platform.openai.com](https://platform.openai.com/api-keys)
-- **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
-:::
 
 ### Supported Providers
 
 | Provider | Model | API Key Variable |
 |----------|-------|------------------|
 | Anthropic | Claude Sonnet | `ANTHROPIC_API_KEY` |
-| OpenAI | GPT-4 | `OPENAI_API_KEY` |
+| OpenAI | GPT-4o | `OPENAI_API_KEY` |
 | Ollama | Llama 3.2 (local) | None required |
+
+### Quick Setup
+
+```bash
+# 1. Set provider
+fastpy ai:config -p anthropic
+
+# 2. Set API key (add to ~/.bashrc or ~/.zshrc)
+export ANTHROPIC_API_KEY=your-key-here
+
+# 3. Test connection
+fastpy ai:config --test
+```
+
+::: tip Getting API Keys
+- **Anthropic (Claude)**: [console.anthropic.com](https://console.anthropic.com/)
+- **OpenAI (GPT-4)**: [platform.openai.com](https://platform.openai.com/api-keys)
+- **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
+:::
+
+## ai
+
+Generate complete resources using natural language descriptions.
+
+```bash
+fastpy ai "Create a blog with posts, categories, and tags"
+```
 
 ### Usage
 

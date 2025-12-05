@@ -117,6 +117,7 @@ These commands work anywhere (not just inside a Fastpy project):
 | Command | Description |
 |---------|-------------|
 | `ai` | Generate resources using natural language |
+| `ai:config` | Configure AI provider (anthropic, openai, ollama) |
 | `init:ai` | Generate AI assistant config (Claude, Copilot, Cursor) |
 
 ### Update Commands
