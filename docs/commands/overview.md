@@ -88,7 +88,9 @@ These commands work anywhere (not just inside a Fastpy project):
 
 | Command | Description |
 |---------|-------------|
-| `db:migrate` | Create a new migration |
+| `db:migrate` | Run pending migrations |
+| `db:migrate -m "..."` | Generate + run migrations |
+| `db:make` | Generate migration only |
 | `db:rollback` | Rollback migrations |
 | `db:fresh` | Drop all tables and re-migrate |
 | `db:seed` | Run database seeders |

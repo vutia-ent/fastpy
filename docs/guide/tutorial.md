@@ -851,8 +851,7 @@ class Post(BaseModel, HasCasts, HasAttributes, HasScopes, table=True):
 ### 5.3 Create Migration
 
 ```bash
-alembic revision --autogenerate -m "Add tags"
-fastpy db:migrate
+fastpy db:migrate -m "Add tags"
 ```
 
 ### 5.4 Create Tag Routes with Active Record

@@ -445,9 +445,8 @@ class {model_name}Update(BaseModel):
             console.print(f"[green]✓[/green] Added import to alembic/env.py")
 
     if migration:
-        console.print("\n[yellow]Run migration commands:[/yellow]")
-        console.print(f'  alembic revision --autogenerate -m "Create {table_name} table"')
-        console.print("  alembic upgrade head")
+        console.print("\n[yellow]Run migration:[/yellow]")
+        console.print(f'  fastpy db:migrate -m "Create {table_name} table"')
 
 
 @app.command("make:controller")
@@ -856,9 +855,8 @@ def make_resource(
 
     if migration:
         table_name = pluralize(to_snake_case(name))
-        console.print("\n[yellow]Run migration commands:[/yellow]")
-        console.print(f'  alembic revision --autogenerate -m "Create {table_name} table"')
-        console.print("  alembic upgrade head")
+        console.print("\n[yellow]Run migration:[/yellow]")
+        console.print(f'  fastpy db:migrate -m "Create {table_name} table"')
 
     console.print(f"\n[green]✓ Resource '{name}' created successfully![/green]")
     features = ["Active Record", "Route Model Binding"]
@@ -1863,9 +1861,39 @@ class {exception_name}(AppException):
 
 @app.command("db:migrate")
 def db_migrate(
-    message: str = typer.Option(None, "--message", "-m", help="Migration message"),
+    message: str = typer.Option(None, "--message", "-m", help="Migration message (auto-generates migration first)"),
 ):
-    """Run database migrations (alembic upgrade head)"""
+    """
+    Run database migrations.
+
+    If -m is provided, auto-generates a new migration first, then runs all migrations.
+
+    Examples:
+        fastpy db:migrate                    # Just run pending migrations
+        fastpy db:migrate -m "Add posts"     # Generate + run migrations
+    """
+    # If message provided, auto-generate migration first
+    if message:
+        console.print(f"[cyan]Generating migration: {message}...[/cyan]")
+
+        result = subprocess.run(
+            ["alembic", "revision", "--autogenerate", "-m", message],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            console.print("[green]✓[/green] Migration generated")
+            # Extract migration file from output
+            for line in result.stdout.split("\n"):
+                if "Generating" in line and ".py" in line:
+                    console.print(f"  {line.strip()}")
+        else:
+            console.print("[red]✗[/red] Failed to generate migration")
+            console.print(result.stderr)
+            raise typer.Exit(1)
+
+    # Run migrations
     console.print("[cyan]Running database migrations...[/cyan]")
 
     result = subprocess.run(
@@ -1880,6 +1908,38 @@ def db_migrate(
             console.print(result.stdout)
     else:
         console.print("[red]✗[/red] Migration failed")
+        console.print(result.stderr)
+        raise typer.Exit(1)
+
+
+@app.command("db:make")
+def db_make(
+    message: str = typer.Argument(..., help="Migration message"),
+):
+    """
+    Generate a new migration without running it.
+
+    Examples:
+        fastpy db:make "Create posts table"
+        fastpy db:make "Add slug to posts"
+    """
+    console.print(f"[cyan]Generating migration: {message}...[/cyan]")
+
+    result = subprocess.run(
+        ["alembic", "revision", "--autogenerate", "-m", message],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        console.print("[green]✓[/green] Migration generated")
+        # Extract migration file from output
+        for line in result.stdout.split("\n"):
+            if "Generating" in line and ".py" in line:
+                console.print(f"  {line.strip()}")
+        console.print("\n[dim]Run 'fastpy db:migrate' to apply this migration[/dim]")
+    else:
+        console.print("[red]✗[/red] Failed to generate migration")
         console.print(result.stderr)
         raise typer.Exit(1)
 
@@ -2270,17 +2330,14 @@ fastpy libs http --usage                 # Show facade usage examples
 ## Database Commands
 
 ```bash
-fastpy db:migrate                         # Run migrations
+fastpy db:migrate                         # Run pending migrations
+fastpy db:migrate -m "Add posts"          # Generate + run migrations
+fastpy db:make "Add slug to posts"        # Generate migration only
 fastpy db:rollback                        # Rollback one migration
 fastpy db:rollback --steps 3              # Rollback multiple
 fastpy db:fresh                           # Drop all & re-migrate
 fastpy db:seed                            # Run all seeders
 fastpy db:seed --seeder User --count 50   # Run specific seeder
-
-# Alembic directly
-alembic revision --autogenerate -m "Add posts table"
-alembic upgrade head
-alembic downgrade -1
 ```
 
 ## Deployment Commands
@@ -3168,7 +3225,8 @@ def list_commands():
         ("make:seeder", "Create seeder", "fastcli make:seeder User"),
         ("make:enum", "Create enum", "fastcli make:enum Status -v active -v inactive"),
         ("make:exception", "Create exception", "fastcli make:exception NotFound -s 404"),
-        ("db:migrate", "Run migrations", "fastcli db:migrate"),
+        ("db:migrate", "Run migrations", "fastcli db:migrate -m 'Add posts'"),
+        ("db:make", "Generate migration", "fastcli db:make 'Add slug'"),
         ("db:rollback", "Rollback migrations", "fastcli db:rollback -s 2"),
         ("db:fresh", "Fresh database", "fastcli db:fresh"),
         ("db:seed", "Run seeders", "fastcli db:seed -c 20"),
@@ -3913,7 +3971,8 @@ def list_all_commands():
         ("make:enum", "Create enum", "fastpy make:enum Status -v active -v inactive"),
         ("make:exception", "Create exception", "fastpy make:exception NotFound -s 404"),
         # Database
-        ("db:migrate", "Run migrations", "fastpy db:migrate"),
+        ("db:migrate", "Run migrations", "fastpy db:migrate -m 'Add posts'"),
+        ("db:make", "Generate migration", "fastpy db:make 'Add slug'"),
         ("db:rollback", "Rollback migrations", "fastpy db:rollback -s 2"),
         ("db:fresh", "Fresh database", "fastpy db:fresh"),
         ("db:seed", "Run seeders", "fastpy db:seed -c 20"),

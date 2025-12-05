@@ -231,17 +231,14 @@ Generated service includes:
 ## Database Commands
 
 ```bash
-fastpy db:migrate                         # Run migrations
+fastpy db:migrate                         # Run pending migrations
+fastpy db:migrate -m "Add posts"          # Generate + run migrations
+fastpy db:make "Add slug to posts"        # Generate migration only
 fastpy db:rollback                        # Rollback one migration
 fastpy db:rollback --steps 3              # Rollback multiple
 fastpy db:fresh                           # Drop all & re-migrate
 fastpy db:seed                            # Run all seeders
 fastpy db:seed --seeder User --count 50   # Run specific seeder
-
-# Alembic directly
-alembic revision --autogenerate -m "Add posts table"
-alembic upgrade head
-alembic downgrade -1
 ```
 
 ## Field Definition Syntax
