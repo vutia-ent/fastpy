@@ -346,7 +346,6 @@ export ENV_FILE=.env.production
 
 # Run migrations
 fastpy db:migrate
-# Or: alembic upgrade head
 ```
 
 ### Deployment Script

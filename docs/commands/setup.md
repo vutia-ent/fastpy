@@ -262,7 +262,7 @@ fastpy db:setup --no-auto-generate
 
 1. Checks if migrations exist in `alembic/versions/`
 2. If no migrations and `--auto-generate` is true, creates initial migration
-3. Runs `alembic upgrade head` to apply all migrations
+3. Runs `fastpy db:migrate` to apply all migrations
 
 ## Workflow Examples
 

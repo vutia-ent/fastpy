@@ -108,7 +108,7 @@ fastpy make:resource Post \
   -m -p
 
 # Run migrations
-alembic upgrade head
+fastpy db:migrate -m "Create posts table"
 ```
 
 ## FastCLI - Code Generation
@@ -629,7 +629,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000
+CMD fastpy db:migrate && uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ```yaml
@@ -692,7 +692,7 @@ Add `import sqlmodel` to the migration file.
 cat setup.log
 
 # Reset database
-alembic downgrade base && alembic upgrade head
+fastpy db:fresh
 
 # Generate new secret key
 python -c "import secrets; print(secrets.token_hex(32))"

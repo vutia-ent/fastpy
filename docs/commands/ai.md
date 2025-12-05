@@ -213,7 +213,9 @@ fastpy make:exception NotFound -s 404
 ### Database Commands
 
 ```bash
-fastpy db:migrate
+fastpy db:migrate                    # Run pending migrations
+fastpy db:migrate -m "Add posts"     # Generate + run migrations
+fastpy db:make "Add slug"            # Generate migration only
 fastpy db:rollback
 fastpy db:fresh
 fastpy db:seed
