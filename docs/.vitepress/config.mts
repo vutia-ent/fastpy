@@ -129,6 +129,14 @@ export default defineConfig({
             { text: 'Patterns', link: '/architecture/patterns' },
             { text: 'Middleware', link: '/architecture/middleware' },
           ]
+        },
+        {
+          text: 'Testing',
+          items: [
+            { text: 'Setup', link: '/testing/setup' },
+            { text: 'Fixtures', link: '/testing/fixtures' },
+            { text: 'Factories', link: '/testing/factories' },
+          ]
         }
       ],
       '/architecture/': [
@@ -150,9 +158,102 @@ export default defineConfig({
             { text: 'Patterns', link: '/architecture/patterns' },
             { text: 'Middleware', link: '/architecture/middleware' },
           ]
+        },
+        {
+          text: 'Testing',
+          items: [
+            { text: 'Setup', link: '/testing/setup' },
+            { text: 'Fixtures', link: '/testing/fixtures' },
+            { text: 'Factories', link: '/testing/factories' },
+          ]
+        }
+      ],
+      '/testing/': [
+        {
+          text: 'Getting Started',
+          items: [
+            { text: 'Introduction', link: '/guide/introduction' },
+            { text: 'Installation', link: '/guide/installation' },
+            { text: 'Quick Start', link: '/guide/quickstart' },
+            { text: 'Configuration', link: '/guide/configuration' },
+          ]
+        },
+        {
+          text: 'Architecture',
+          items: [
+            { text: 'Project Structure', link: '/architecture/structure' },
+            { text: 'Models & Concerns', link: '/architecture/models' },
+            { text: 'Route Model Binding', link: '/architecture/binding' },
+            { text: 'Patterns', link: '/architecture/patterns' },
+            { text: 'Middleware', link: '/architecture/middleware' },
+          ]
+        },
+        {
+          text: 'Testing',
+          items: [
+            { text: 'Setup', link: '/testing/setup' },
+            { text: 'Fixtures', link: '/testing/fixtures' },
+            { text: 'Factories', link: '/testing/factories' },
+          ]
         }
       ],
       '/commands/': [
+        {
+          text: 'CLI Commands',
+          items: [
+            { text: 'Overview', link: '/commands/overview' },
+            { text: 'Server Commands', link: '/commands/server' },
+            { text: 'Database Commands', link: '/commands/database' },
+            { text: 'Make Commands', link: '/commands/make' },
+            { text: 'AI Commands', link: '/commands/ai' },
+          ]
+        },
+        {
+          text: 'Deployment',
+          items: [
+            { text: 'Production', link: '/deployment/production' },
+            { text: 'Docker', link: '/deployment/docker' },
+          ]
+        },
+        {
+          text: 'Field Types',
+          items: [
+            { text: 'Overview', link: '/fields/overview' },
+            { text: 'Basic Types', link: '/fields/basic' },
+            { text: 'Advanced Types', link: '/fields/advanced' },
+            { text: 'Validation Rules', link: '/fields/validation' },
+          ]
+        }
+      ],
+      '/deployment/': [
+        {
+          text: 'CLI Commands',
+          items: [
+            { text: 'Overview', link: '/commands/overview' },
+            { text: 'Server Commands', link: '/commands/server' },
+            { text: 'Database Commands', link: '/commands/database' },
+            { text: 'Make Commands', link: '/commands/make' },
+            { text: 'AI Commands', link: '/commands/ai' },
+          ]
+        },
+        {
+          text: 'Deployment',
+          items: [
+            { text: 'Production', link: '/deployment/production' },
+            { text: 'Docker', link: '/deployment/docker' },
+          ]
+        },
+        {
+          text: 'Field Types',
+          items: [
+            { text: 'Overview', link: '/fields/overview' },
+            { text: 'Basic Types', link: '/fields/basic' },
+            { text: 'Advanced Types', link: '/fields/advanced' },
+            { text: 'Validation Rules', link: '/fields/validation' },
+          ]
+        }
+      ],
+      '/fields/': [
         {
           text: 'CLI Commands',
           items: [
@@ -209,25 +310,6 @@ export default defineConfig({
           ]
         }
       ],
-      '/testing/': [
-        {
-          text: 'Testing',
-          items: [
-            { text: 'Setup', link: '/testing/setup' },
-            { text: 'Fixtures', link: '/testing/fixtures' },
-            { text: 'Factories', link: '/testing/factories' },
-          ]
-        }
-      ],
-      '/deployment/': [
-        {
-          text: 'Deployment',
-          items: [
-            { text: 'Production', link: '/deployment/production' },
-            { text: 'Docker', link: '/deployment/docker' },
-          ]
-        }
-      ],
       '/examples/': [
         {
           text: 'Examples',
@@ -235,27 +317,6 @@ export default defineConfig({
             { text: 'Blog System', link: '/examples/blog' },
             { text: 'E-commerce', link: '/examples/ecommerce' },
             { text: 'API Service', link: '/examples/api-service' },
-          ]
-        }
-      ],
-      '/fields/': [
-        {
-          text: 'CLI Commands',
-          items: [
-            { text: 'Overview', link: '/commands/overview' },
-            { text: 'Server Commands', link: '/commands/server' },
-            { text: 'Database Commands', link: '/commands/database' },
-            { text: 'Make Commands', link: '/commands/make' },
-            { text: 'AI Commands', link: '/commands/ai' },
-          ]
-        },
-        {
-          text: 'Field Types',
-          items: [
-            { text: 'Overview', link: '/fields/overview' },
-            { text: 'Basic Types', link: '/fields/basic' },
-            { text: 'Advanced Types', link: '/fields/advanced' },
-            { text: 'Validation Rules', link: '/fields/validation' },
           ]
         }
       ]
