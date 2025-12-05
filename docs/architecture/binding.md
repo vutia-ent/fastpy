@@ -258,15 +258,14 @@ async def update_post(
     return post
 ```
 
-## Comparison with Laravel
+## Binding Options Reference
 
-Fastpy's route model binding is inspired by Laravel:
+| Function | Behavior |
+|----------|----------|
+| `bind(Model)` | Returns `None` if not found |
+| `bind_or_fail(Model)` | Raises 404 if not found |
+| `bind_trashed(Model)` | Includes soft-deleted records |
+| `bind(Model, field="slug")` | Bind by custom field |
+| `bind(Model, param="uuid")` | Use custom route parameter |
 
-| Feature | Laravel | Fastpy |
-|---------|---------|--------|
-| Basic binding | `Route::get('/users/{user}')` | `bind_or_fail(User)` |
-| Custom key | `{user:slug}` | `bind(User, field="slug")` |
-| Soft deletes | `withTrashed()` | `bind_trashed(User)` |
-| Optional | Nullable type hint | `bind(User)` returns None |
-
-The main difference is that Fastpy uses explicit dependency injection rather than implicit parameter resolution, which aligns with FastAPI's design philosophy.
+Fastpy uses explicit dependency injection for route model binding, which aligns with FastAPI's design philosophy and provides full type safety.

@@ -1,6 +1,6 @@
 # Models & Concerns
 
-Fastpy models extend SQLModel with Laravel-style concerns (traits) for enhanced functionality.
+Fastpy models extend SQLModel with powerful concerns (mixins) for enhanced functionality.
 
 ## Base Model
 
@@ -76,7 +76,7 @@ await user.delete(force=True)    # Hard delete
 
 ## Model Concerns
 
-Mix in Laravel-style functionality to your models:
+Mix in powerful functionality to your models using concerns:
 
 ```python
 from app.models.base import BaseModel
