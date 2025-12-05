@@ -1,182 +1,293 @@
 # Architectural Patterns
 
-Fastpy implements proven patterns for maintainable, scalable APIs.
+Fastpy implements Laravel-style patterns adapted for Python/FastAPI.
 
-## MVC Pattern
+## Key Principles
 
-The primary architecture follows Model-View-Controller.
+1. **Active Record Pattern** - Models handle their own persistence
+2. **Route Model Binding** - Auto-resolve route params to model instances
+3. **Model Concerns** - Laravel-style traits for reusable functionality
+4. **FormRequest Validation** - Declarative validation with rules
+5. **Soft Deletes by Default** - `deleted_at` timestamp on all models
+6. **Query Scopes** - Reusable, chainable query constraints
+7. **Facades** - Clean interfaces for common services
+8. **Code Generation** - Sensible defaults in all generators
+
+## MVC Pattern with Active Record
 
 ```
-Request → Route (View) → Controller → Model → Database
-                ↓
-           Response
+Request → Route → Controller → Model (Active Record) → Database
+                      ↓
+               Response
 ```
 
-### Model
+### Model (Active Record)
 
-Data structure and database representation.
+Models handle their own persistence - no session passing required.
 
 ```python
 # app/models/post.py
-class Post(BaseModel, table=True):
+from app.models.base import BaseModel
+from app.models.concerns import HasScopes, GuardsAttributes
+
+class Post(BaseModel, HasScopes, GuardsAttributes, table=True):
     __tablename__ = "posts"
 
     title: str = Field(max_length=200)
     body: str = Field(sa_column=Column(Text))
     user_id: int = Field(foreign_key="users.id")
+
+    # Mass assignment protection
+    _fillable = ['title', 'body', 'user_id']
+    _guarded = ['id', 'created_at', 'updated_at', 'deleted_at']
+
+    # Query scopes
+    @classmethod
+    def scope_published(cls, query):
+        return query.where(cls.published == True)
 ```
 
-### Controller
+### Controller (Active Record)
 
-Business logic and data operations.
+Controllers use Active Record methods - no session dependency needed.
 
 ```python
 # app/controllers/post_controller.py
 class PostController:
     @staticmethod
-    async def create(session: AsyncSession, data: dict, user_id: int):
-        post = Post(**data, user_id=user_id)
-        session.add(post)
-        await session.commit()
-        await session.refresh(post)
+    async def create(data: PostCreate) -> Post:
+        return await Post.create(**data.model_dump())
+
+    @staticmethod
+    async def update(id: int, data: PostUpdate) -> Post:
+        post = await Post.find_or_fail(id)
+        await post.update(**data.model_dump(exclude_unset=True))
         return post
+
+    @staticmethod
+    async def delete(id: int) -> dict:
+        post = await Post.find_or_fail(id)
+        await post.delete()  # Soft delete
+        return {"message": "Post deleted successfully"}
 ```
 
-### View (Route)
+### View (Route with Model Binding)
 
-HTTP interface and request handling.
+Routes use Route Model Binding to auto-resolve models from `{id}` params.
 
 ```python
 # app/routes/post_routes.py
-@router.post("/")
-async def create_post(
-    data: PostCreate,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_active_user)
+from app.utils.binding import bind_or_fail, bind_trashed
+
+@router.get("/{id}")
+async def get_post(post: Post = bind_or_fail(Post)):
+    return post  # Auto-resolved from {id}
+
+@router.put("/{id}")
+async def update_post(
+    post: Post = bind_or_fail(Post),
+    data: PostUpdate
 ):
-    post = await PostController.create(session, data.dict(), current_user.id)
-    return success_response(data=post, message="Post created")
+    await post.update(**data.model_dump(exclude_unset=True))
+    return post
+
+@router.post("/{id}/restore")
+async def restore_post(post: Post = bind_trashed(Post)):
+    await post.restore()
+    return post
 ```
 
-## Service/Repository Pattern
+## Service Layer (Optional)
 
-For complex domains, add service and repository layers.
+For complex business logic, add a service layer that uses Active Record internally.
 
 ```
-Route → Service → Repository → Model → Database
-```
-
-### Repository
-
-Pure data access, no business logic.
-
-```python
-# app/repositories/post_repository.py
-class PostRepository(BaseRepository[Post]):
-    model = Post
-
-    async def find_published(self, session: AsyncSession):
-        result = await session.execute(
-            select(Post)
-            .where(Post.published == True)
-            .where(Post.deleted_at.is_(None))
-            .order_by(Post.published_at.desc())
-        )
-        return result.scalars().all()
-
-    async def find_by_slug(self, session: AsyncSession, slug: str):
-        result = await session.execute(
-            select(Post)
-            .where(Post.slug == slug)
-            .where(Post.deleted_at.is_(None))
-        )
-        return result.scalar_one_or_none()
+Route → Service → Model (Active Record) → Database
 ```
 
 ### Service
 
-Business logic with lifecycle hooks.
+Business logic using Active Record - no repository dependency needed.
 
 ```python
 # app/services/post_service.py
-class PostService(BaseService[Post]):
-    model = Post
+class PostService:
+    """
+    Service for Post business logic.
+    Uses Active Record pattern internally.
+    """
 
-    def __init__(self):
-        self.repository = PostRepository()
+    @staticmethod
+    async def create(data: PostCreate) -> Post:
+        """Create with business logic"""
+        # Add business logic before creation
+        post_data = data.model_dump()
+        post_data['slug'] = slugify(post_data['title'])
+        return await Post.create(**post_data)
 
-    async def before_create(self, data: dict) -> dict:
-        # Auto-generate slug
-        if 'slug' not in data:
-            data['slug'] = slugify(data['title'])
-        return data
-
-    async def publish(self, session: AsyncSession, post: Post) -> Post:
-        post.published = True
-        post.published_at = datetime.utcnow()
-        await session.commit()
+    @staticmethod
+    async def publish(id: int) -> Post:
+        """Publish a post with validation"""
+        post = await Post.find_or_fail(id)
+        if not post.body:
+            raise BadRequestException("Cannot publish post without body")
+        await post.update(
+            published=True,
+            published_at=datetime.utcnow()
+        )
         return post
+
+    @staticmethod
+    async def get_published(page: int = 1, per_page: int = 20):
+        """Get published posts using query scopes"""
+        return await Post.query().published().latest().paginate(page, per_page)
 ```
+
+## Repository (Optional)
+
+Repositories are **optional**. Prefer Query Scopes for simple queries.
+
+```python
+# app/repositories/post_repository.py
+class PostRepository:
+    """
+    Use repositories only for:
+    - Complex queries that don't fit as scopes
+    - Custom caching logic
+    - Multi-model operations
+    - Testing with mocks
+    """
+
+    @staticmethod
+    async def find_published():
+        """Better as a query scope on the model"""
+        return await Post.query().published().get()
+
+    @staticmethod
+    async def find_by_slug(slug: str):
+        """Better as a query scope on the model"""
+        return await Post.first_where(slug=slug)
+```
+
+::: tip Prefer Query Scopes
+For simple queries, add scopes to your model instead of creating a repository:
+
+```python
+class Post(BaseModel, HasScopes, table=True):
+    @classmethod
+    def scope_published(cls, query):
+        return query.where(cls.published == True)
+
+# Usage
+posts = await Post.query().published().latest().get()
+```
+:::
 
 ## Soft Delete Pattern
 
-All models support soft deletion via `deleted_at` timestamp.
+All models support soft deletion via `deleted_at` timestamp (enabled by default).
+
+### Active Record Usage
 
 ```python
-class BaseModel(SQLModel):
-    deleted_at: Optional[datetime] = None
+# Soft delete (default)
+await post.delete()
 
-    def soft_delete(self):
-        self.deleted_at = datetime.utcnow()
+# Hard delete (permanent)
+await post.delete(force=True)
 
-    def restore(self):
-        self.deleted_at = None
-
-    @property
-    def is_deleted(self) -> bool:
-        return self.deleted_at is not None
-```
-
-### Usage
-
-```python
-# Soft delete
-post.soft_delete()
-await session.commit()
+# Check if deleted
+if post.is_deleted:
+    print("Post has been soft deleted")
 
 # Restore
-post.restore()
-await session.commit()
+await post.restore()
+```
 
-# Query (filter deleted)
-select(Post).where(Post.deleted_at.is_(None))
+### Querying with Soft Deletes
+
+```python
+# Normal queries exclude soft-deleted records
+posts = await Post.query().get()  # Only non-deleted
+
+# Include soft-deleted records
+posts = await Post.query().with_trashed().get()
+
+# Only soft-deleted records
+posts = await Post.query().only_trashed().get()
+
+# Find including trashed
+post = await Post.query().with_trashed().where(id=1).first()
+```
+
+### Route for Restore
+
+```python
+from app.utils.binding import bind_trashed
+
+@router.post("/{id}/restore")
+async def restore_post(post: Post = bind_trashed(Post)):
+    """Restore a soft-deleted post"""
+    await post.restore()
+    return post
+```
+
+## FormRequest Validation
+
+Laravel-style declarative validation using FormRequest classes.
+
+```python
+from app.validation import FormRequest, validated
+
+class CreatePostRequest(FormRequest):
+    rules = {
+        'title': 'required|max:200',
+        'body': 'required',
+        'slug': 'required|unique:posts',
+    }
+
+    messages = {
+        'title.required': 'Please provide a title.',
+        'slug.unique': 'This slug is already taken.',
+    }
+
+    def authorize(self, user=None) -> bool:
+        return user is not None
+
+# Usage in routes
+@router.post("/")
+async def create(request: CreatePostRequest = validated(CreatePostRequest)):
+    return await Post.create(**request.validated_data)
 ```
 
 ## Dependency Injection
 
-FastAPI's dependency system for clean, testable code.
+FastAPI's dependency system with Active Record (no session passing required).
 
 ```python
-# Database session
-async def get_session():
-    async with async_session() as session:
-        yield session
-
-# Current user
+# Current user authentication
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    session: AsyncSession = Depends(get_session)
+    token: str = Depends(oauth2_scheme)
 ):
     # Validate token and return user
-    pass
+    return await User.find_or_fail(user_id)
 
 # Route with dependencies
 @router.get("/profile")
 async def get_profile(
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     return success_response(data=current_user)
+
+# Combined with Route Model Binding
+@router.put("/{id}")
+async def update(
+    post: Post = bind_or_fail(Post),  # Auto-resolved
+    request: UpdatePostRequest = validated(UpdatePostRequest),  # Validated
+    current_user: User = Depends(get_current_active_user)  # Authenticated
+):
+    await post.update(**request.validated_data)
+    return post
 ```
 
 ## Response Pattern
@@ -235,17 +346,44 @@ raise NotFoundException("Post not found")
 
 ## When to Use Each Pattern
 
-### MVC Only (Simple APIs)
+### Active Record + Controller (Recommended Default)
 
+Use for most projects:
 - CRUD operations
-- Minimal business logic
-- Small to medium projects
-- Rapid prototyping
+- Standard business logic
+- Small to large projects
+- Rapid development
 
-### Service/Repository (Complex Domains)
+```bash
+fastpy make:resource Post -f title:string:required -m -p
+```
 
+### Add Service Layer (Complex Business Logic)
+
+When you need:
 - Complex business rules
-- Multiple data sources
-- Team projects
-- Enterprise applications
-- When business logic needs unit testing
+- Multi-step operations
+- Side effects (emails, notifications)
+- Logic reuse across controllers
+
+```bash
+fastpy make:resource Post -f title:string:required -m -p
+fastpy make:service Post
+```
+
+### Add Repository (Rarely Needed)
+
+Only when you need:
+- Complex queries that don't fit as scopes
+- Custom caching logic
+- Multi-model transactions
+- Testing with mocks
+
+::: tip Default to Query Scopes
+Most queries can be expressed as model scopes, making repositories unnecessary:
+
+```python
+# Instead of repository
+posts = await Post.query().published().popular(1000).latest().get()
+```
+:::

@@ -60,47 +60,23 @@ The `fastpy new` command will:
 #### CLI Options
 
 ```bash
-# Create without running interactive setup
-fastpy new my-api --no-setup
-
 # Create without initializing git
 fastpy new my-api --no-git
+
+# Create from a specific branch (e.g., dev)
+fastpy new my-api --branch dev
 
 # Open documentation
 fastpy docs
 
 # Upgrade CLI to latest version
 fastpy upgrade
+
+# Check your environment
+fastpy doctor
 ```
 
 ### Using Git Clone
-
-```bash
-# Clone the repository
-git clone https://github.com/vutia-ent/fastpy.git my-api
-cd my-api
-
-# Run the automated setup
-./setup.sh
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Start the development server
-fastpy serve
-# Or: uvicorn main:app --reload
-```
-
-The setup script will:
-- Create a Python virtual environment
-- Install all dependencies
-- Copy `.env.example` to `.env`
-- Initialize the database
-- Run initial migrations
-
-## Manual Installation
-
-If you prefer manual setup:
 
 ```bash
 # Clone the repository
@@ -114,19 +90,70 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy environment file
-cp .env.example .env
+# Run interactive setup
+fastpy setup
 
-# Edit .env with your database credentials
-nano .env
+# Start the development server
+fastpy serve
+```
+
+The `fastpy setup` command will:
+- Initialize `.env` from `.env.example`
+- Configure database connection
+- Generate secure secret key
+- Run database migrations
+- Create admin user (optional)
+- Install pre-commit hooks (optional)
+
+## Manual Installation
+
+If you prefer to run each step individually:
+
+```bash
+# Clone the repository
+git clone https://github.com/vutia-ent/fastpy.git my-api
+cd my-api
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Initialize environment file
+fastpy setup:env
+
+# Configure database (interactive)
+fastpy setup:db
+
+# Or configure database non-interactively
+fastpy setup:db -d mysql -n mydb -y
+
+# Generate secure secret key
+fastpy setup:secret
 
 # Run migrations
-alembic upgrade head
+fastpy db:setup
+
+# Create admin user (optional)
+fastpy make:admin
 ```
 
 ## Environment Configuration
 
-Edit your `.env` file with your settings:
+Edit your `.env` file manually or use CLI commands:
+
+```bash
+# Using CLI (recommended)
+fastpy setup:db -d postgresql    # Configure database
+fastpy setup:secret              # Generate secret key
+
+# Or edit .env directly
+nano .env
+```
+
+Example `.env` configuration:
 
 ```bash
 # Application
@@ -148,11 +175,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
-::: warning
-Always change `SECRET_KEY` to a random value in production. Generate one with:
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-```
+::: tip
+Use `fastpy setup:secret` to generate a secure secret key automatically.
 :::
 
 ## Database Setup

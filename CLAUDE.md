@@ -28,14 +28,17 @@ fastpy route:list
 
 ## Code Generation (FastCLI)
 
+Generated code uses **Active Record pattern**, **Route Model Binding**, and **Model Concerns** by default.
+
 ```bash
 # Generate complete resource (model + controller + routes)
+# Includes: Active Record, Route Model Binding, Model Concerns (HasScopes, GuardsAttributes)
 fastpy make:resource Post -f title:string:required,max:200 -f body:text:required -m -p
 
 # Individual generators
-fastpy make:model Post -f title:string:required -m      # Model + migration
-fastpy make:controller Post                              # Controller
-fastpy make:route Post --protected                       # Routes (with auth)
+fastpy make:model Post -f title:string:required -m      # Model + Concerns + migration
+fastpy make:controller Post                              # Controller (Active Record)
+fastpy make:route Post --protected                       # Routes (with binding + auth)
 fastpy make:service Post                                 # Service class
 fastpy make:repository Post                              # Repository class
 fastpy make:middleware Logging                           # Middleware
@@ -44,6 +47,10 @@ fastpy make:factory Post                                 # Test factory
 fastpy make:seeder Post                                  # Database seeder
 fastpy make:enum Status -v active -v inactive            # Enum
 fastpy make:exception PaymentFailed -s 400               # Custom exception
+
+# Disable defaults (legacy mode)
+fastpy make:model Post --no-concerns                     # Without Model Concerns
+fastpy make:route Post --no-binding                      # Without Route Model Binding
 
 # List all commands
 fastpy list
@@ -72,6 +79,31 @@ fastpy upgrade                           # Update CLI to latest
 fastpy docs                              # Open documentation
 fastpy libs                              # List available facades
 fastpy libs http --usage                 # Show facade usage examples
+```
+
+## Setup Commands
+
+Setup commands for initializing a new Fastpy project.
+
+```bash
+# Full interactive setup (after venv is created)
+fastpy setup                             # Complete setup wizard
+
+# Individual setup steps
+fastpy setup:env                         # Initialize .env from .env.example
+fastpy setup:db                          # Configure database connection
+fastpy setup:db -d mysql                 # Specify database driver
+fastpy setup:db -d postgresql            # PostgreSQL
+fastpy setup:db -d sqlite                # SQLite (development only)
+fastpy setup:secret                      # Generate secure JWT secret key
+fastpy setup:hooks                       # Install pre-commit hooks
+
+# Admin user creation
+fastpy make:admin                        # Create super admin (interactive)
+fastpy make:admin -n "Admin" -e admin@example.com -p secretpass -y
+
+# Database setup (migrations)
+fastpy db:setup                          # Run migrations (auto-generate if needed)
 ```
 
 ## Deployment Commands
@@ -501,6 +533,68 @@ async def restore_post(post: Post = bind_trashed(Post)):
     await post.restore()
     return post
 ```
+
+## FormRequest Validation (Laravel-style)
+
+Create form request classes with validation rules:
+
+```bash
+# Generate request classes
+fastpy make:request CreateContact -f name:required|max:255 -f email:required|email|unique:contacts
+fastpy make:request UpdateUser --model User --update
+
+# Or generate with resource (includes Create and Update requests)
+fastpy make:resource Contact -f name:string:required -f email:email:required -m -p -v
+```
+
+### Using FormRequest in Routes
+
+```python
+from app.validation import validated
+from app.requests.contact_request import CreateContactRequest, UpdateContactRequest
+
+@router.post("/contacts")
+async def create(request: CreateContactRequest = validated(CreateContactRequest)):
+    """Create with automatic validation"""
+    return await Contact.create(**request.validated_data)
+
+@router.put("/contacts/{id}")
+async def update(
+    request: UpdateContactRequest = validated(UpdateContactRequest),
+    contact: Contact = bind_or_fail(Contact)
+):
+    """Update with validation + route binding"""
+    await contact.update(**request.validated_data)
+    return contact
+```
+
+### Defining FormRequest Classes
+
+```python
+from app.validation.form_request import FormRequest
+
+class CreateContactRequest(FormRequest):
+    rules = {
+        'name': 'required|max:255',
+        'email': 'required|email|unique:contacts',
+        'phone': 'nullable|phone',
+    }
+
+    messages = {
+        'email.unique': 'This email is already registered.',
+    }
+
+    def authorize(self, user=None) -> bool:
+        return user is not None  # Require authentication
+
+    def prepare_for_validation(self, data: dict) -> dict:
+        # Transform data before validation
+        if 'email' in data:
+            data['email'] = data['email'].lower().strip()
+        return data
+```
+
+**Available Validation Rules:** `required`, `nullable`, `email`, `url`, `max:N`, `min:N`, `unique:table,column`, `exists:table,column`, `confirmed`, `in:val1,val2`, `numeric`, `integer`, `boolean`, `date`, `phone`, `uuid`, `json`
 
 ## Authentication Endpoints
 

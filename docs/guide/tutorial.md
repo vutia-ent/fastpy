@@ -45,9 +45,33 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 1.4 Configure the Database
+### 1.4 Run Interactive Setup
 
-Edit `.env` file:
+Use the CLI to configure your project:
+
+```bash
+fastpy setup
+```
+
+This will guide you through:
+1. **Environment Setup** - Creates `.env` from `.env.example`
+2. **Database Configuration** - Choose MySQL, PostgreSQL, or SQLite
+3. **Secret Key** - Generates a secure JWT secret
+4. **Migrations** - Runs initial database migrations
+5. **Admin User** - Optionally creates a super admin account
+6. **Pre-commit Hooks** - Installs code quality hooks
+
+::: tip Quick Setup for Development
+For a quick SQLite setup, use:
+```bash
+fastpy setup:env
+fastpy setup:db -d sqlite -n blog
+fastpy setup:secret
+```
+:::
+
+::: details Manual Configuration (Alternative)
+If you prefer manual setup, edit `.env` file:
 
 ```bash
 # Use SQLite for development (easy setup)
@@ -63,13 +87,13 @@ SECRET_KEY=your-super-secret-key-change-this
 DEBUG=true
 ```
 
-### 1.5 Run Initial Migration
-
+Then run migrations:
 ```bash
 fastpy db:migrate
 ```
+:::
 
-### 1.6 Start the Server
+### 1.5 Start the Server
 
 ```bash
 fastpy serve
@@ -170,7 +194,7 @@ curl http://localhost:8000/api/categories
 
 Now let's create the main blog post resource.
 
-### 3.1 Generate the Post Resource with Route Model Binding
+### 3.1 Generate the Post Resource
 
 ```bash
 fastpy make:resource Post \
@@ -184,8 +208,15 @@ fastpy make:resource Post \
   -f category_id:integer:nullable,foreign:categories.id \
   -f author_id:integer:required,foreign:users.id \
   -f views:integer:default:0 \
-  -m -p --binding
+  -m -p
 ```
+
+::: tip Included by Default
+Generated code now includes:
+- **Active Record pattern** - Clean `Post.create()`, `post.update()`, `post.delete()` methods
+- **Route Model Binding** - Auto-resolve `{id}` route params to model instances
+- **Model Concerns** - `HasScopes` and `GuardsAttributes` for query scopes and mass assignment protection
+:::
 
 ### 3.2 Run the Migration
 
@@ -289,92 +320,89 @@ class PostUpdate(BaseModel):
     category_id: Optional[int] = None
 ```
 
-### 3.4 Update the Post Controller
+### 3.4 Update the Post Controller with Active Record
 
-Edit `app/controllers/post_controller.py`:
+Fastpy models support Active Record pattern for cleaner code. Edit `app/controllers/post_controller.py`:
 
 ```python
 from typing import Optional, List
 from datetime import datetime
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
 from app.models.post import Post
 
 class PostController:
     @staticmethod
     async def get_all(
-        session: AsyncSession,
         published_only: bool = True,
         category_id: Optional[int] = None,
         author_id: Optional[int] = None
     ) -> List[Post]:
-        """Get all posts with optional filters."""
-        query = select(Post).where(Post.deleted_at.is_(None))
+        """Get all posts with optional filters using Query Builder."""
+        query = Post.query()
 
         if published_only:
-            query = query.where(Post.is_published == True)
+            query = query.published()  # Uses scope_published
 
         if category_id:
-            query = query.where(Post.category_id == category_id)
+            query = query.by_category(category_id)  # Uses scope_by_category
 
         if author_id:
-            query = query.where(Post.author_id == author_id)
+            query = query.by_author(author_id)  # Uses scope_by_author
 
-        query = query.order_by(Post.created_at.desc())
-        result = await session.execute(query)
-        return result.scalars().all()
+        return await query.latest().get()
 
     @staticmethod
-    async def get_by_id(session: AsyncSession, id: int) -> Optional[Post]:
-        result = await session.execute(
-            select(Post).where(Post.id == id, Post.deleted_at.is_(None))
-        )
-        return result.scalar_one_or_none()
+    async def get_by_id(id: int) -> Optional[Post]:
+        """Find post by ID using Active Record."""
+        return await Post.find(id)
 
     @staticmethod
-    async def get_by_slug(session: AsyncSession, slug: str) -> Optional[Post]:
-        result = await session.execute(
-            select(Post).where(Post.slug == slug, Post.deleted_at.is_(None))
-        )
-        return result.scalar_one_or_none()
+    async def get_by_slug(slug: str) -> Optional[Post]:
+        """Find post by slug using Active Record."""
+        return await Post.first_where(slug=slug)
 
     @staticmethod
-    async def create(session: AsyncSession, data: dict, author_id: int) -> Post:
-        post = Post(**data, author_id=author_id)
-        if post.is_published and not post.published_at:
-            post.published_at = datetime.utcnow()
-        session.add(post)
-        await session.commit()
-        await session.refresh(post)
-        return post
+    async def create(data: dict, author_id: int) -> Post:
+        """Create a new post using Active Record."""
+        if data.get('is_published') and not data.get('published_at'):
+            data['published_at'] = datetime.utcnow()
+
+        return await Post.create(**data, author_id=author_id)
 
     @staticmethod
-    async def update(session: AsyncSession, post: Post, data: dict) -> Post:
-        for key, value in data.items():
-            if value is not None:
-                setattr(post, key, value)
-
+    async def update(post: Post, data: dict) -> Post:
+        """Update a post using Active Record."""
         # Set published_at when publishing
         if data.get('is_published') and not post.published_at:
-            post.published_at = datetime.utcnow()
+            data['published_at'] = datetime.utcnow()
 
-        post.touch()
-        await session.commit()
-        await session.refresh(post)
+        await post.update(**{k: v for k, v in data.items() if v is not None})
         return post
 
     @staticmethod
-    async def delete(session: AsyncSession, post: Post) -> None:
-        post.soft_delete()
-        await session.commit()
+    async def delete(post: Post) -> None:
+        """Soft delete a post."""
+        await post.delete()  # Soft delete by default
 
     @staticmethod
-    async def increment_views(session: AsyncSession, post: Post) -> Post:
+    async def increment_views(post: Post) -> Post:
+        """Increment view count."""
         post.views += 1
-        await session.commit()
-        await session.refresh(post)
+        await post.save()
         return post
 ```
+
+::: tip Active Record Methods
+Fastpy models support these convenient methods:
+- `await Post.create(**data)` - Create and save a new record
+- `await Post.find(id)` - Find by ID (returns None if not found)
+- `await Post.find_or_fail(id)` - Find by ID or raise NotFoundException
+- `await Post.where(field=value)` - Query by field
+- `await Post.first_where(field=value)` - Get first matching record
+- `await post.update(**data)` - Update record
+- `await post.save()` - Save changes
+- `await post.delete()` - Soft delete
+- `await post.delete(force=True)` - Hard delete
+:::
 
 ### 3.5 Update Post Routes with Binding
 
@@ -383,12 +411,9 @@ Edit `app/routes/post_routes.py`:
 ```python
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
-from app.database.session import get_session
-from app.utils.auth import get_current_active_user, get_current_user_optional
-from app.utils.binding import bind_or_fail, bind
+from app.utils.auth import get_current_active_user
+from app.utils.binding import bind_or_fail
 from app.utils.responses import success_response, paginated_response
-from app.utils.pagination import paginate
 from app.models.post import Post, PostCreate, PostUpdate
 from app.models.user import User
 from app.controllers.post_controller import PostController
@@ -398,7 +423,6 @@ router = APIRouter()
 
 @router.get("/")
 async def list_posts(
-    session: AsyncSession = Depends(get_session),
     category_id: Optional[int] = Query(None, description="Filter by category"),
     author_id: Optional[int] = Query(None, description="Filter by author"),
     page: int = Query(1, ge=1),
@@ -406,7 +430,6 @@ async def list_posts(
 ):
     """List all published posts."""
     posts = await PostController.get_all(
-        session,
         published_only=True,
         category_id=category_id,
         author_id=author_id
@@ -420,50 +443,38 @@ async def list_posts(
 
 
 @router.get("/drafts")
-async def list_drafts(
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_active_user)
-):
+async def list_drafts(current_user: User = Depends(get_current_active_user)):
     """List current user's draft posts."""
-    posts = await PostController.get_all(
-        session,
-        published_only=False,
-        author_id=current_user.id
-    )
-    drafts = [p for p in posts if not p.is_published]
+    # Use Query Builder with scopes
+    drafts = await Post.query().draft().by_author(current_user.id).latest().get()
     return success_response(data=drafts)
 
 
 @router.get("/slug/{slug}")
-async def get_by_slug(
-    slug: str,
-    session: AsyncSession = Depends(get_session)
-):
+async def get_by_slug(slug: str):
     """Get a post by its slug."""
-    post = await PostController.get_by_slug(session, slug)
+    post = await Post.first_where(slug=slug)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
     # Increment views
-    await PostController.increment_views(session, post)
+    await PostController.increment_views(post)
     return success_response(data=post)
 
 
 @router.get("/{id}")
 async def show(post: Post = bind_or_fail(Post)):
-    """Get a post by ID."""
+    """Get a post by ID (uses route model binding)."""
     return success_response(data=post)
 
 
 @router.post("/", status_code=201)
 async def create(
     data: PostCreate,
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new post."""
     post = await PostController.create(
-        session,
         data.model_dump(),
         author_id=current_user.id
     )
@@ -474,58 +485,53 @@ async def create(
 async def update(
     data: PostUpdate,
     post: Post = bind_or_fail(Post),
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update a post."""
-    # Check ownership
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this post")
 
-    updated = await PostController.update(session, post, data.model_dump(exclude_unset=True))
+    updated = await PostController.update(post, data.model_dump(exclude_unset=True))
     return success_response(data=updated, message="Post updated successfully")
 
 
 @router.delete("/{id}")
 async def delete(
     post: Post = bind_or_fail(Post),
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a post (soft delete)."""
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this post")
 
-    await PostController.delete(session, post)
+    await post.delete()  # Active Record soft delete
     return success_response(message="Post deleted successfully")
 
 
 @router.post("/{id}/publish")
 async def publish(
     post: Post = bind_or_fail(Post),
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Publish a draft post."""
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    updated = await PostController.update(session, post, {'is_published': True})
-    return success_response(data=updated, message="Post published successfully")
+    await post.update(is_published=True)  # Active Record update
+    return success_response(data=post, message="Post published successfully")
 
 
 @router.post("/{id}/unpublish")
 async def unpublish(
     post: Post = bind_or_fail(Post),
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Unpublish a post (convert to draft)."""
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    updated = await PostController.update(session, post, {'is_published': False})
-    return success_response(data=updated, message="Post unpublished")
+    await post.update(is_published=False)  # Active Record update
+    return success_response(data=post, message="Post unpublished")
 ```
 
 ### 3.6 Register Post Routes
@@ -589,6 +595,89 @@ curl http://localhost:8000/api/posts/1
 ```
 :::
 
+### 3.7 Add FormRequest Validation (Optional)
+
+For more powerful validation with Laravel-style rules, create FormRequest classes:
+
+```bash
+# Generate request classes
+fastpy make:request CreatePost --model Post
+fastpy make:request UpdatePost --model Post --update
+```
+
+Edit `app/requests/post_request.py`:
+
+```python
+from app.validation import FormRequest
+
+class CreatePostRequest(FormRequest):
+    rules = {
+        'title': 'required|max:200',
+        'slug': 'required|unique:posts',
+        'body': 'required|min:100',
+        'category_id': 'exists:categories',
+        'is_published': 'boolean',
+    }
+
+    messages = {
+        'title.required': 'Every post needs a title.',
+        'slug.unique': 'This slug is already taken.',
+        'body.min': 'Post body must be at least 100 characters.',
+    }
+
+    def authorize(self, user=None) -> bool:
+        return user is not None  # Only authenticated users
+
+
+class UpdatePostRequest(FormRequest):
+    rules = {
+        'title': 'max:200',
+        'body': 'min:100',
+        'category_id': 'exists:categories',
+        'is_published': 'boolean',
+    }
+
+    def authorize(self, user=None) -> bool:
+        return user is not None
+```
+
+Then update your routes to use the validated requests:
+
+```python
+from app.validation import validated
+from app.requests.post_request import CreatePostRequest, UpdatePostRequest
+
+@router.post("/", status_code=201)
+async def create(
+    request: CreatePostRequest = validated(CreatePostRequest),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Create a new post with FormRequest validation."""
+    post = await Post.create(**request.validated_data, author_id=current_user.id)
+    return success_response(data=post, message="Post created successfully")
+
+
+@router.put("/{id}")
+async def update(
+    post: Post = bind_or_fail(Post),
+    request: UpdatePostRequest = validated(UpdatePostRequest),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update a post with validation."""
+    if post.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    await post.update(**request.validated_data)
+    return success_response(data=post, message="Post updated successfully")
+```
+
+::: tip FormRequest Features
+- **rules** - Laravel-style validation rules (`required|max:200|unique:posts`)
+- **messages** - Custom error messages
+- **authorize()** - Authorization check before validation
+- **validated_data** - Only validated fields, safe for mass assignment
+:::
+
 ## Step 4: Add Comments
 
 Let's add a comment system for posts.
@@ -602,7 +691,7 @@ fastpy make:resource Comment \
   -f author_id:integer:required,foreign:users.id \
   -f parent_id:integer:nullable,foreign:comments.id \
   -f is_approved:boolean:default:true \
-  -m -p --binding
+  -m -p
 ```
 
 ### 4.2 Run Migration
@@ -611,16 +700,14 @@ fastpy make:resource Comment \
 fastpy db:migrate
 ```
 
-### 4.3 Update Comment Routes for Nested Comments
+### 4.3 Update Comment Routes with Active Record
 
 Edit `app/routes/comment_routes.py`:
 
 ```python
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from app.database.session import get_session
+from typing import Optional
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 from app.utils.auth import get_current_active_user
 from app.utils.binding import bind_or_fail
 from app.utils.responses import success_response
@@ -637,53 +724,40 @@ class CommentCreate(BaseModel):
 
 
 @router.get("/post/{post_id}")
-async def list_comments(
-    post_id: int,
-    session: AsyncSession = Depends(get_session)
-):
-    """Get all comments for a post."""
-    result = await session.execute(
-        select(Comment)
-        .where(Comment.post_id == post_id)
-        .where(Comment.deleted_at.is_(None))
-        .where(Comment.is_approved == True)
-        .order_by(Comment.created_at.asc())
+async def list_comments(post_id: int):
+    """Get all comments for a post using Active Record."""
+    comments = await Comment.where(
+        post_id=post_id,
+        is_approved=True
     )
-    comments = result.scalars().all()
     return success_response(data=comments)
 
 
 @router.post("/", status_code=201)
 async def create(
     data: CommentCreate,
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Add a comment to a post."""
-    comment = Comment(
+    """Add a comment to a post using Active Record."""
+    comment = await Comment.create(
         body=data.body,
         post_id=data.post_id,
         parent_id=data.parent_id,
         author_id=current_user.id
     )
-    session.add(comment)
-    await session.commit()
-    await session.refresh(comment)
     return success_response(data=comment, message="Comment added")
 
 
 @router.delete("/{id}")
 async def delete(
     comment: Comment = bind_or_fail(Comment),
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Delete a comment."""
+    """Delete a comment using Active Record."""
     if comment.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    comment.soft_delete()
-    await session.commit()
+    await comment.delete()  # Soft delete
     return success_response(message="Comment deleted")
 ```
 
@@ -781,15 +855,12 @@ alembic revision --autogenerate -m "Add tags"
 fastpy db:migrate
 ```
 
-### 5.4 Create Tag Routes
+### 5.4 Create Tag Routes with Active Record
 
 Create `app/routes/tag_routes.py`:
 
 ```python
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from app.database.session import get_session
 from app.utils.auth import get_current_active_user
 from app.utils.responses import success_response
 from app.models.tag import Tag, TagCreate, PostTag
@@ -800,25 +871,19 @@ router = APIRouter()
 
 
 @router.get("/")
-async def list_tags(session: AsyncSession = Depends(get_session)):
-    """List all tags."""
-    result = await session.execute(
-        select(Tag).where(Tag.deleted_at.is_(None))
-    )
-    return success_response(data=result.scalars().all())
+async def list_tags():
+    """List all tags using Active Record."""
+    tags = await Tag.all()  # Gets all non-deleted records
+    return success_response(data=tags)
 
 
 @router.post("/", status_code=201)
 async def create(
     data: TagCreate,
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Create a new tag."""
-    tag = Tag(**data.model_dump())
-    session.add(tag)
-    await session.commit()
-    await session.refresh(tag)
+    """Create a new tag using Active Record."""
+    tag = await Tag.create(**data.model_dump())
     return success_response(data=tag)
 
 
@@ -826,19 +891,16 @@ async def create(
 async def attach_to_post(
     tag_id: int,
     post_id: int,
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Attach a tag to a post."""
-    # Check ownership
-    post = await session.get(Post, post_id)
+    # Check ownership using Active Record
+    post = await Post.find(post_id)
     if not post or post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Create link
-    link = PostTag(post_id=post_id, tag_id=tag_id)
-    session.add(link)
-    await session.commit()
+    await PostTag.create(post_id=post_id, tag_id=tag_id)
     return success_response(message="Tag attached to post")
 
 
@@ -846,20 +908,12 @@ async def attach_to_post(
 async def detach_from_post(
     tag_id: int,
     post_id: int,
-    session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Remove a tag from a post."""
-    result = await session.execute(
-        select(PostTag).where(
-            PostTag.post_id == post_id,
-            PostTag.tag_id == tag_id
-        )
-    )
-    link = result.scalar_one_or_none()
+    link = await PostTag.first_where(post_id=post_id, tag_id=tag_id)
     if link:
-        await session.delete(link)
-        await session.commit()
+        await link.delete(force=True)  # Hard delete for link tables
     return success_response(message="Tag removed from post")
 ```
 

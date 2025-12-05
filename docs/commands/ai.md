@@ -118,26 +118,9 @@ export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
 
 Fastpy also includes configuration generators for popular AI coding assistants. These configuration files help AI assistants understand your project structure, conventions, and available commands.
 
-## Setup During Installation
+## Configuration
 
-When running `./setup.sh`, you'll be prompted to select an AI assistant:
-
-```
-========================================
-  AI Assistant Configuration
-========================================
-
-Select an AI assistant to configure (optional):
-  1) Claude (CLAUDE.md)
-  2) GitHub Copilot (.github/copilot-instructions.md)
-  3) Cursor (.cursorrules)
-  4) Google Gemini (.gemini/instructions.md)
-  5) Skip
-```
-
-## Manual Configuration
-
-You can also generate AI configurations at any time:
+Generate AI assistant configurations using the CLI:
 
 ```bash
 # Interactive mode - choose from menu

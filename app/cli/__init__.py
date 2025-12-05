@@ -24,7 +24,19 @@ from app.cli.deploy import (
     install_requirements,
 )
 
+from app.cli.setup import (
+    setup_db,
+    setup_secret,
+    setup_admin,
+    setup_hooks,
+    setup_env,
+    run_migrations,
+    full_setup,
+    DatabaseConfig,
+)
+
 __all__ = [
+    # Deploy
     "DeployConfig",
     "deploy_init",
     "deploy_nginx",
@@ -43,4 +55,13 @@ __all__ = [
     "show_status",
     "check_requirements",
     "install_requirements",
+    # Setup
+    "setup_db",
+    "setup_secret",
+    "setup_admin",
+    "setup_hooks",
+    "setup_env",
+    "run_migrations",
+    "full_setup",
+    "DatabaseConfig",
 ]

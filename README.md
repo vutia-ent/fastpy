@@ -80,14 +80,19 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 ```bash
 # Clone and setup
 git clone https://github.com/vutia-ent/fastpy.git && cd fastpy
-./setup.sh
 
-# Activate virtual environment
+# Create virtual environment
+python3 -m venv venv
 source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run interactive setup
+fastpy setup
 
 # Start the development server
 fastpy serve
-# Or: uvicorn main:app --reload
 ```
 
 Visit: http://localhost:8000/docs
@@ -752,7 +757,9 @@ For a fresh start, clone the latest version:
 ```bash
 git clone https://github.com/vutia-ent/fastpy.git my-new-api
 cd my-new-api
-./setup.sh
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+fastpy setup
 ```
 
 :warning: **Note**: Be careful when updating files you've customized. Always backup your changes first.

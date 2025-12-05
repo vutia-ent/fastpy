@@ -205,6 +205,7 @@ export default defineConfig({
           text: 'CLI Commands',
           items: [
             { text: 'Overview', link: '/commands/overview' },
+            { text: 'Setup Commands', link: '/commands/setup' },
             { text: 'Server Commands', link: '/commands/server' },
             { text: 'Database Commands', link: '/commands/database' },
             { text: 'Make Commands', link: '/commands/make' },
@@ -233,6 +234,7 @@ export default defineConfig({
           text: 'CLI Commands',
           items: [
             { text: 'Overview', link: '/commands/overview' },
+            { text: 'Setup Commands', link: '/commands/setup' },
             { text: 'Server Commands', link: '/commands/server' },
             { text: 'Database Commands', link: '/commands/database' },
             { text: 'Make Commands', link: '/commands/make' },
@@ -261,6 +263,7 @@ export default defineConfig({
           text: 'CLI Commands',
           items: [
             { text: 'Overview', link: '/commands/overview' },
+            { text: 'Setup Commands', link: '/commands/setup' },
             { text: 'Server Commands', link: '/commands/server' },
             { text: 'Database Commands', link: '/commands/database' },
             { text: 'Make Commands', link: '/commands/make' },

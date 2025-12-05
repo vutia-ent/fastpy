@@ -59,10 +59,16 @@ This generates:
 
 | File | Description |
 |------|-------------|
-| `app/models/post.py` | SQLModel model with fields |
-| `app/controllers/post_controller.py` | CRUD business logic |
-| `app/routes/post_routes.py` | Protected API endpoints |
+| `app/models/post.py` | SQLModel model with Model Concerns |
+| `app/controllers/post_controller.py` | Active Record-based CRUD logic |
+| `app/routes/post_routes.py` | Routes with Route Model Binding |
 | `alembic/versions/xxx_create_posts.py` | Database migration |
+
+::: info Included by Default
+- **Active Record** - `Post.create()`, `post.update()`, `post.delete()`
+- **Route Model Binding** - Auto-resolve `{id}` params to model instances
+- **Model Concerns** - `HasScopes`, `GuardsAttributes` for clean queries
+:::
 
 ## Step 4: Apply the Migration
 
@@ -112,7 +118,10 @@ curl http://localhost:8000/api/posts/1 \
 
 ::: details Model (`app/models/post.py`)
 ```python
-class Post(BaseModel, table=True):
+from app.models.base import BaseModel
+from app.models.concerns import HasScopes, GuardsAttributes
+
+class Post(BaseModel, HasScopes, GuardsAttributes, table=True):
     __tablename__ = "posts"
 
     title: str = Field(max_length=200)
@@ -120,30 +129,58 @@ class Post(BaseModel, table=True):
     body: str = Field(sa_column=Column(Text))
     published: bool = Field(default=False)
     published_at: Optional[datetime] = None
+
+    # Mass assignment protection
+    _fillable = ['title', 'slug', 'body', 'published', 'published_at']
+    _guarded = ['id', 'created_at', 'updated_at', 'deleted_at']
 ```
 :::
 
-::: details Controller (`app/controllers/post_controller.py`)
+::: details Controller (`app/controllers/post_controller.py`) - Active Record
 ```python
+from app.models.post import Post
+
 class PostController:
     @staticmethod
-    async def get_all(session: AsyncSession):
-        result = await session.execute(
-            select(Post).where(Post.deleted_at.is_(None))
-        )
-        return result.scalars().all()
+    async def get_all(skip: int = 0, limit: int = 100):
+        """Uses Active Record pattern - no session needed"""
+        return await Post.query().limit(limit).offset(skip).get()
+
+    @staticmethod
+    async def create(data: PostCreate):
+        return await Post.create(**data.model_dump())
+
+    @staticmethod
+    async def update(id: int, data: PostUpdate):
+        post = await Post.find_or_fail(id)
+        await post.update(**data.model_dump(exclude_unset=True))
+        return post
+
+    @staticmethod
+    async def delete(id: int):
+        post = await Post.find_or_fail(id)
+        await post.delete()  # Soft delete
 ```
 :::
 
-::: details Routes (`app/routes/post_routes.py`)
+::: details Routes (`app/routes/post_routes.py`) - Route Model Binding
 ```python
+from app.utils.binding import bind_or_fail
+
 @router.get("/")
-async def list_posts(
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_active_user)
-):
-    posts = await PostController.get_all(session)
-    return success_response(data=posts)
+async def list_posts(current_user: User = Depends(get_current_active_user)):
+    """No session needed - Active Record handles it"""
+    return await PostController.get_all()
+
+@router.get("/{id}")
+async def get_one(post: Post = bind_or_fail(Post)):
+    """Route model binding - auto-resolved from {id}"""
+    return post
+
+@router.put("/{id}")
+async def update(data: PostUpdate, post: Post = bind_or_fail(Post)):
+    await post.update(**data.model_dump(exclude_unset=True))
+    return post
 ```
 :::
 

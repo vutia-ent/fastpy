@@ -296,12 +296,14 @@ def make_model(
     ),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive mode"),
     migration: bool = typer.Option(False, "--migration", "-m", help="Create migration"),
+    no_concerns: bool = typer.Option(False, "--no-concerns", help="Disable Model Concerns (enabled by default)"),
 ):
-    """Create a new model with field definitions and automatic validation"""
+    """Create a new model with field definitions, validation, and Model Concerns"""
     model_name = to_pascal_case(name)
     table_name = pluralize(to_snake_case(name))
     file_name = to_snake_case(name) + ".py"
     file_path = Path(f"app/models/{file_name}")
+    snake_name = to_snake_case(name)
 
     if file_path.exists():
         console.print(f"[red]Model already exists:[/red] {file_path}")
@@ -323,7 +325,7 @@ def make_model(
         field_defs = [FieldDefinition("name", "string", nullable=False, max_length=255)]
 
     # Generate imports
-    imports = ["from typing import Optional", "from datetime import datetime", "from sqlmodel import Field"]
+    imports = ["from typing import Optional, List", "from datetime import datetime", "from sqlmodel import Field"]
 
     # Check if we need additional imports
     needs_date = any(f.field_type == "date" for f in field_defs)
@@ -346,6 +348,24 @@ def make_model(
 
     imports.append("from app.models.base import BaseModel, utc_now")
 
+    # Model Concerns are enabled by default
+    use_concerns = not no_concerns
+    concerns_import = ""
+    concerns_mixin = ""
+    concerns_config = ""
+
+    if use_concerns:
+        concerns_import = "from app.models.concerns import HasScopes, GuardsAttributes"
+        concerns_mixin = ", HasScopes, GuardsAttributes"
+        # Generate fillable fields list
+        fillable_fields = [f.name for f in field_defs]
+        concerns_config = f'''
+    # Mass assignment protection
+    _fillable = {fillable_fields}
+    _guarded = ["id", "created_at", "updated_at", "deleted_at"]
+'''
+        imports.append(concerns_import)
+
     # Generate model fields
     model_fields = "\n".join([f.get_model_field() for f in field_defs])
     create_fields = "\n".join([f.get_create_field() for f in field_defs])
@@ -355,10 +375,13 @@ def make_model(
     model_template = f'''{chr(10).join(imports)}
 
 
-class {model_name}(BaseModel, table=True):
+class {model_name}(BaseModel{concerns_mixin}, table=True):
     """
     {model_name} model.
+
     Table name: {table_name}
+    Active Record methods: create(), find(), find_or_fail(), where(), update(), delete()
+    Query builder: {model_name}.query().where(...).order_by(...).get()
     """
 
     __tablename__ = "{table_name}"
@@ -369,7 +392,7 @@ class {model_name}(BaseModel, table=True):
     created_at: datetime = Field(default_factory=utc_now, nullable=False)
     updated_at: datetime = Field(default_factory=utc_now, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None, nullable=True)
-
+{concerns_config}
 
 class {model_name}Create(BaseModel):
     """
@@ -404,6 +427,9 @@ class {model_name}Update(BaseModel):
     for field in field_defs:
         console.print(f"  - {field.name}: {field.field_type}")
 
+    if use_concerns:
+        console.print("[cyan]Model Concerns: HasScopes, GuardsAttributes[/cyan]")
+
     # Update alembic env.py
     env_path = Path("alembic/env.py")
     if env_path.exists():
@@ -426,145 +452,117 @@ class {model_name}Update(BaseModel):
 
 @app.command("make:controller")
 def make_controller(name: str = typer.Argument(..., help="Controller name (e.g., BlogPost)")):
-    """Create a new controller with CRUD operations"""
+    """Create a new controller with CRUD operations using Active Record pattern"""
     controller_name = to_pascal_case(name) + "Controller"
     model_name = to_pascal_case(name)
     file_name = to_snake_case(name) + "_controller.py"
     file_path = Path(f"app/controllers/{file_name}")
+    snake_name = to_snake_case(name)
 
     if file_path.exists():
         console.print(f"[red]Controller already exists:[/red] {file_path}")
         raise typer.Exit(1)
 
-    controller_template = f'''from typing import List, Optional
-from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
+    controller_template = f'''from typing import List, Optional, Dict, Any
 
-from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update
-from app.utils.pagination import paginate, PaginatedResult
+from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update
+from app.utils.exceptions import NotFoundException
 
 
 class {controller_name}:
-    """Controller for {model_name} operations"""
+    """
+    Controller for {model_name} operations.
+    Uses Active Record pattern - all database operations are handled by the model.
+    """
 
     @staticmethod
-    async def get_all(session: AsyncSession, skip: int = 0, limit: int = 100) -> List[{model_name}]:
-        """Get all non-deleted {to_snake_case(name)}s"""
-        query = select({model_name}).where({model_name}.deleted_at.is_(None)).offset(skip).limit(limit)
-        result = await session.execute(query)
-        return list(result.scalars().all())
+    async def get_all(skip: int = 0, limit: int = 100) -> List[{model_name}]:
+        """Get all non-deleted {snake_name}s"""
+        return await {model_name}.query().limit(limit).offset(skip).get()
 
     @staticmethod
     async def get_paginated(
-        session: AsyncSession,
         page: int = 1,
         per_page: int = 20,
         sort_by: Optional[str] = None,
         sort_order: str = "asc"
-    ) -> PaginatedResult[{model_name}]:
-        """Get paginated {to_snake_case(name)}s"""
-        query = select({model_name}).where({model_name}.deleted_at.is_(None))
-        return await paginate(
-            session=session,
-            query=query,
-            page=page,
-            per_page=per_page,
-            sort_by=sort_by,
-            sort_order=sort_order
-        )
+    ) -> Dict[str, Any]:
+        """Get paginated {snake_name}s with sorting"""
+        query = {model_name}.query()
+        if sort_by:
+            query = query.order_by(sort_by, sort_order)
+        return await query.paginate(page=page, per_page=per_page)
 
     @staticmethod
-    async def get_by_id(session: AsyncSession, id: int) -> {model_name}:
-        """Get {to_snake_case(name)} by ID"""
-        query = select({model_name}).where({model_name}.id == id, {model_name}.deleted_at.is_(None))
-        result = await session.execute(query)
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="{model_name} not found")
-        return item
+    async def get_by_id(id: int) -> {model_name}:
+        """Get {snake_name} by ID or raise 404"""
+        return await {model_name}.find_or_fail(id)
 
     @staticmethod
-    async def create(session: AsyncSession, data: {model_name}Create) -> {model_name}:
+    async def create(data: {model_name}Create) -> {model_name}:
         """
-        Create a new {to_snake_case(name)}.
+        Create a new {snake_name}.
         Validations are handled by Pydantic schema.
         """
-        item = {model_name}(**data.model_dump())
-        session.add(item)
-        await session.flush()
-        await session.refresh(item)
-        return item
+        return await {model_name}.create(**data.model_dump())
 
     @staticmethod
-    async def update(session: AsyncSession, id: int, data: {model_name}Update) -> {model_name}:
+    async def update(id: int, data: {model_name}Update) -> {model_name}:
         """
-        Update a {to_snake_case(name)}.
+        Update a {snake_name}.
         Only provided fields are updated.
         """
-        item = await {controller_name}.get_by_id(session, id)
-
-        # Update only provided fields
-        for field, value in data.model_dump(exclude_unset=True).items():
-            setattr(item, field, value)
-
-        item.touch()
-        session.add(item)
-        await session.flush()
-        await session.refresh(item)
-        return item
+        {snake_name} = await {model_name}.find_or_fail(id)
+        await {snake_name}.update(**data.model_dump(exclude_unset=True))
+        return {snake_name}
 
     @staticmethod
-    async def delete(session: AsyncSession, id: int) -> dict:
-        """Soft delete a {to_snake_case(name)}"""
-        item = await {controller_name}.get_by_id(session, id)
-        item.soft_delete()
-        session.add(item)
-        await session.flush()
+    async def delete(id: int) -> dict:
+        """Soft delete a {snake_name}"""
+        {snake_name} = await {model_name}.find_or_fail(id)
+        await {snake_name}.delete()
         return {{"message": "{model_name} deleted successfully"}}
 
     @staticmethod
-    async def restore(session: AsyncSession, id: int) -> {model_name}:
-        """Restore a soft deleted {to_snake_case(name)}"""
-        query = select({model_name}).where({model_name}.id == id)
-        result = await session.execute(query)
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="{model_name} not found")
-
-        item.restore()
-        session.add(item)
-        await session.flush()
-        await session.refresh(item)
-        return item
+    async def force_delete(id: int) -> dict:
+        """Permanently delete a {snake_name}"""
+        {snake_name} = await {model_name}.find_or_fail(id)
+        await {snake_name}.delete(force=True)
+        return {{"message": "{model_name} permanently deleted"}}
 
     @staticmethod
-    async def count(session: AsyncSession) -> int:
-        """Count total {to_snake_case(name)}s"""
-        from sqlalchemy import func
-        query = select(func.count({model_name}.id)).where({model_name}.deleted_at.is_(None))
-        result = await session.execute(query)
-        return result.scalar() or 0
+    async def restore(id: int) -> {model_name}:
+        """Restore a soft deleted {snake_name}"""
+        {snake_name} = await {model_name}.query().with_trashed().where(id=id).first()
+        if not {snake_name}:
+            raise NotFoundException("{model_name} not found")
+        await {snake_name}.restore()
+        return {snake_name}
 
     @staticmethod
-    async def exists(session: AsyncSession, id: int) -> bool:
-        """Check if {to_snake_case(name)} exists"""
-        query = select({model_name}.id).where({model_name}.id == id, {model_name}.deleted_at.is_(None))
-        result = await session.execute(query)
-        return result.scalar_one_or_none() is not None
+    async def count() -> int:
+        """Count total {snake_name}s"""
+        return await {model_name}.query().count()
+
+    @staticmethod
+    async def exists(id: int) -> bool:
+        """Check if {snake_name} exists"""
+        return await {model_name}.query().where(id=id).exists()
 '''
 
     file_path.write_text(controller_template)
     console.print(f"[green]✓[/green] Controller created: {file_path}")
+    console.print("[cyan]Using Active Record pattern (no session dependency)[/cyan]")
 
 
 @app.command("make:route")
 def make_route(
     name: str = typer.Argument(..., help="Route name (e.g., BlogPost)"),
     protected: bool = typer.Option(False, "--protected", "-p", help="Add authentication"),
-    binding: bool = typer.Option(False, "--binding", "-b", help="Use route model binding"),
+    no_binding: bool = typer.Option(False, "--no-binding", help="Disable route model binding (enabled by default)"),
+    validation: bool = typer.Option(False, "--validation", "-v", help="Use FormRequest validation (Laravel-style)"),
 ):
-    """Create a new route file with all CRUD endpoints"""
+    """Create a new route file with all CRUD endpoints using Active Record and Route Model Binding"""
     model_name = to_pascal_case(name)
     controller_name = model_name + "Controller"
     file_name = to_snake_case(name) + "_routes.py"
@@ -583,17 +581,31 @@ def make_route(
         auth_import = "\nfrom app.utils.auth import get_current_active_user\nfrom app.models.user import User"
         auth_dep = ", current_user: User = Depends(get_current_active_user)"
 
-    # Route model binding template
-    if binding:
-        binding_import = "\nfrom app.utils.binding import bind, bind_or_fail, bind_trashed"
+    # Route model binding is enabled by default
+    use_binding = not no_binding
+
+    # FormRequest validation imports
+    if validation:
+        validation_import = f"\nfrom app.validation import validated\nfrom app.requests.{snake_name}_request import Create{model_name}Request, Update{model_name}Request"
+        create_param = f"request: Create{model_name}Request = validated(Create{model_name}Request)"
+        update_param = f"request: Update{model_name}Request = validated(Update{model_name}Request)"
+        create_data = "request.validated_data"
+        update_data = "request.validated_data"
+    else:
+        validation_import = ""
+        create_param = f"data: {model_name}Create"
+        update_param = f"data: {model_name}Update"
+        create_data = "data"
+        update_data = "data.model_dump(exclude_unset=True)"
+
+    if use_binding:
+        binding_import = "\nfrom app.utils.binding import bind_or_fail, bind_trashed"
         route_template = f'''from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.connection import get_session
 from app.controllers.{snake_name}_controller import {controller_name}
 from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
-from app.config.settings import settings{auth_import}{binding_import}
+from app.config.settings import settings{auth_import}{binding_import}{validation_import}
 
 router = APIRouter()
 
@@ -601,11 +613,10 @@ router = APIRouter()
 @router.get("/", response_model=List[{model_name}Read])
 async def get_all(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    session: AsyncSession = Depends(get_session){auth_dep}
+    limit: int = Query(100, ge=1, le=1000){auth_dep}
 ):
     """Get all {snake_name}s"""
-    return await {controller_name}.get_all(session, skip, limit)
+    return await {controller_name}.get_all(skip, limit)
 
 
 @router.get("/paginated")
@@ -613,29 +624,17 @@ async def get_paginated(
     page: int = Query(1, ge=1),
     per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
     sort_by: Optional[str] = Query(None),
-    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
-    session: AsyncSession = Depends(get_session){auth_dep}
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"){auth_dep}
 ) -> Dict[str, Any]:
     """Get paginated {snake_name}s with sorting"""
-    result = await {controller_name}.get_paginated(session, page, per_page, sort_by, sort_order)
-    return {{
-        "data": result.items,
-        "pagination": {{
-            "page": result.page,
-            "per_page": result.per_page,
-            "total": result.total,
-            "pages": result.pages,
-            "has_next": result.has_next,
-            "has_prev": result.has_prev
-        }}
-    }}
+    return await {controller_name}.get_paginated(page, per_page, sort_by, sort_order)
 
 
 @router.get("/count")
-async def count(session: AsyncSession = Depends(get_session){auth_dep}) -> Dict[str, int]:
+async def count({auth_dep.lstrip(", ") if auth_dep else ""}) -> Dict[str, int]:
     """Get total count"""
-    count = await {controller_name}.count(session)
-    return {{"count": count}}
+    total = await {controller_name}.count()
+    return {{"count": total}}
 
 
 @router.get("/{{id}}", response_model={model_name}Read)
@@ -645,140 +644,9 @@ async def get_one({snake_name}: {model_name} = bind_or_fail({model_name}){auth_d
 
 
 @router.head("/{{id}}", status_code=status.HTTP_200_OK)
-async def check_exists({snake_name}: {model_name} = bind({model_name}){auth_dep}):
+async def check_exists(id: int{auth_dep}):
     """Check if {snake_name} exists"""
-    if not {snake_name}:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="{model_name} not found")
-    return None
-
-
-@router.post("/", response_model={model_name}Read, status_code=201)
-async def create(data: {model_name}Create, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Create a new {snake_name}"""
-    return await {controller_name}.create(session, data)
-
-
-@router.put("/{{id}}", response_model={model_name}Read)
-async def update(
-    data: {model_name}Update,
-    {snake_name}: {model_name} = bind_or_fail({model_name}),
-    session: AsyncSession = Depends(get_session){auth_dep}
-):
-    """Full update a {snake_name} (auto-resolved via route model binding)"""
-    for field, value in data.model_dump(exclude_unset=True).items():
-        setattr({snake_name}, field, value)
-    {snake_name}.touch()
-    session.add({snake_name})
-    await session.flush()
-    await session.refresh({snake_name})
-    return {snake_name}
-
-
-@router.patch("/{{id}}", response_model={model_name}Read)
-async def partial_update(
-    data: {model_name}Update,
-    {snake_name}: {model_name} = bind_or_fail({model_name}),
-    session: AsyncSession = Depends(get_session){auth_dep}
-):
-    """Partial update a {snake_name} (auto-resolved via route model binding)"""
-    for field, value in data.model_dump(exclude_unset=True).items():
-        setattr({snake_name}, field, value)
-    {snake_name}.touch()
-    session.add({snake_name})
-    await session.flush()
-    await session.refresh({snake_name})
-    return {snake_name}
-
-
-@router.delete("/{{id}}")
-async def delete(
-    {snake_name}: {model_name} = bind_or_fail({model_name}),
-    session: AsyncSession = Depends(get_session){auth_dep}
-):
-    """Soft delete a {snake_name} (auto-resolved via route model binding)"""
-    {snake_name}.soft_delete()
-    session.add({snake_name})
-    await session.flush()
-    return {{"message": "{model_name} deleted successfully"}}
-
-
-@router.post("/{{id}}/restore", response_model={model_name}Read)
-async def restore(
-    {snake_name}: {model_name} = bind_trashed({model_name}),
-    session: AsyncSession = Depends(get_session){auth_dep}
-):
-    """Restore a soft deleted {snake_name} (includes trashed records)"""
-    {snake_name}.restore()
-    session.add({snake_name})
-    await session.flush()
-    await session.refresh({snake_name})
-    return {snake_name}
-'''
-    else:
-        # Standard template without binding
-        route_template = f'''from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database.connection import get_session
-from app.controllers.{snake_name}_controller import {controller_name}
-from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
-from app.config.settings import settings{auth_import}
-
-router = APIRouter()
-
-
-@router.get("/", response_model=List[{model_name}Read])
-async def get_all(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    session: AsyncSession = Depends(get_session){auth_dep}
-):
-    """Get all {snake_name}s"""
-    return await {controller_name}.get_all(session, skip, limit)
-
-
-@router.get("/paginated")
-async def get_paginated(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
-    sort_by: Optional[str] = Query(None),
-    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
-    session: AsyncSession = Depends(get_session){auth_dep}
-) -> Dict[str, Any]:
-    """Get paginated {snake_name}s with sorting"""
-    result = await {controller_name}.get_paginated(session, page, per_page, sort_by, sort_order)
-    return {{
-        "data": result.items,
-        "pagination": {{
-            "page": result.page,
-            "per_page": result.per_page,
-            "total": result.total,
-            "pages": result.pages,
-            "has_next": result.has_next,
-            "has_prev": result.has_prev
-        }}
-    }}
-
-
-@router.get("/count")
-async def count(session: AsyncSession = Depends(get_session){auth_dep}) -> Dict[str, int]:
-    """Get total count"""
-    count = await {controller_name}.count(session)
-    return {{"count": count}}
-
-
-@router.get("/{{id}}", response_model={model_name}Read)
-async def get_one(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Get {snake_name} by ID"""
-    return await {controller_name}.get_by_id(session, id)
-
-
-@router.head("/{{id}}", status_code=status.HTTP_200_OK)
-async def check_exists(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Check if {snake_name} exists"""
-    exists = await {controller_name}.exists(session, id)
+    exists = await {controller_name}.exists(id)
     if not exists:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="{model_name} not found")
@@ -786,37 +654,127 @@ async def check_exists(id: int, session: AsyncSession = Depends(get_session){aut
 
 
 @router.post("/", response_model={model_name}Read, status_code=201)
-async def create(data: {model_name}Create, session: AsyncSession = Depends(get_session){auth_dep}):
+async def create({create_param}{auth_dep}):
     """Create a new {snake_name}"""
-    return await {controller_name}.create(session, data)
+    return await {controller_name}.create({create_data})
 
 
 @router.put("/{{id}}", response_model={model_name}Read)
 async def update(
-    id: int, data: {model_name}Update, session: AsyncSession = Depends(get_session){auth_dep}
+    {update_param},
+    {snake_name}: {model_name} = bind_or_fail({model_name}){auth_dep}
 ):
-    """Full update a {snake_name}"""
-    return await {controller_name}.update(session, id, data)
+    """Full update a {snake_name} (auto-resolved via route model binding)"""
+    await {snake_name}.update(**{update_data})
+    return {snake_name}
 
 
 @router.patch("/{{id}}", response_model={model_name}Read)
 async def partial_update(
-    id: int, data: {model_name}Update, session: AsyncSession = Depends(get_session){auth_dep}
+    {update_param},
+    {snake_name}: {model_name} = bind_or_fail({model_name}){auth_dep}
 ):
-    """Partial update a {snake_name}"""
-    return await {controller_name}.update(session, id, data)
+    """Partial update a {snake_name} (auto-resolved via route model binding)"""
+    await {snake_name}.update(**{update_data})
+    return {snake_name}
 
 
 @router.delete("/{{id}}")
-async def delete(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
-    """Soft delete a {snake_name}"""
-    return await {controller_name}.delete(session, id)
+async def delete({snake_name}: {model_name} = bind_or_fail({model_name}){auth_dep}):
+    """Soft delete a {snake_name} (auto-resolved via route model binding)"""
+    await {snake_name}.delete()
+    return {{"message": "{model_name} deleted successfully"}}
 
 
 @router.post("/{{id}}/restore", response_model={model_name}Read)
-async def restore(id: int, session: AsyncSession = Depends(get_session){auth_dep}):
+async def restore({snake_name}: {model_name} = bind_trashed({model_name}){auth_dep}):
+    """Restore a soft deleted {snake_name} (includes trashed records)"""
+    await {snake_name}.restore()
+    return {snake_name}
+'''
+    else:
+        # Template without binding (legacy mode)
+        route_template = f'''from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, Query, status
+
+from app.controllers.{snake_name}_controller import {controller_name}
+from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update, {model_name}Read
+from app.config.settings import settings{auth_import}{validation_import}
+
+router = APIRouter()
+
+
+@router.get("/", response_model=List[{model_name}Read])
+async def get_all(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000){auth_dep}
+):
+    """Get all {snake_name}s"""
+    return await {controller_name}.get_all(skip, limit)
+
+
+@router.get("/paginated")
+async def get_paginated(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"){auth_dep}
+) -> Dict[str, Any]:
+    """Get paginated {snake_name}s with sorting"""
+    return await {controller_name}.get_paginated(page, per_page, sort_by, sort_order)
+
+
+@router.get("/count")
+async def count({auth_dep.lstrip(", ") if auth_dep else ""}) -> Dict[str, int]:
+    """Get total count"""
+    total = await {controller_name}.count()
+    return {{"count": total}}
+
+
+@router.get("/{{id}}", response_model={model_name}Read)
+async def get_one(id: int{auth_dep}):
+    """Get {snake_name} by ID"""
+    return await {controller_name}.get_by_id(id)
+
+
+@router.head("/{{id}}", status_code=status.HTTP_200_OK)
+async def check_exists(id: int{auth_dep}):
+    """Check if {snake_name} exists"""
+    exists = await {controller_name}.exists(id)
+    if not exists:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="{model_name} not found")
+    return None
+
+
+@router.post("/", response_model={model_name}Read, status_code=201)
+async def create({create_param}{auth_dep}):
+    """Create a new {snake_name}"""
+    return await {controller_name}.create({create_data})
+
+
+@router.put("/{{id}}", response_model={model_name}Read)
+async def update(id: int, {update_param}{auth_dep}):
+    """Full update a {snake_name}"""
+    return await {controller_name}.update(id, {update_data})
+
+
+@router.patch("/{{id}}", response_model={model_name}Read)
+async def partial_update(id: int, {update_param}{auth_dep}):
+    """Partial update a {snake_name}"""
+    return await {controller_name}.update(id, {update_data})
+
+
+@router.delete("/{{id}}")
+async def delete(id: int{auth_dep}):
+    """Soft delete a {snake_name}"""
+    return await {controller_name}.delete(id)
+
+
+@router.post("/{{id}}/restore", response_model={model_name}Read)
+async def restore(id: int{auth_dep}):
     """Restore a soft deleted {snake_name}"""
-    return await {controller_name}.restore(session, id)
+    return await {controller_name}.restore(id)
 '''
 
     file_path.write_text(route_template)
@@ -825,8 +783,18 @@ async def restore(id: int, session: AsyncSession = Depends(get_session){auth_dep
     if protected:
         console.print("[cyan]Routes are protected with authentication[/cyan]")
 
-    if binding:
+    if use_binding:
         console.print("[cyan]Routes use route model binding (auto-resolve models from route params)[/cyan]")
+    else:
+        console.print("[yellow]Route model binding disabled. Use default to enable.[/yellow]")
+
+    if validation:
+        console.print("[cyan]Using FormRequest validation (Laravel-style)[/cyan]")
+        console.print(f"[yellow]Create request classes:[/yellow]")
+        console.print(f"  fastpy make:request Create{model_name} --model {model_name}")
+        console.print(f"  fastpy make:request Update{model_name} --model {model_name} --update")
+
+    console.print("[cyan]Using Active Record pattern (no session dependency)[/cyan]")
 
     console.print("\n[yellow]Add to main.py:[/yellow]")
     console.print(
@@ -849,9 +817,19 @@ def make_resource(
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive mode"),
     migration: bool = typer.Option(False, "--migration", "-m", help="Create migration"),
     protected: bool = typer.Option(False, "--protected", "-p", help="Add authentication"),
-    binding: bool = typer.Option(False, "--binding", "-b", help="Use route model binding"),
+    no_binding: bool = typer.Option(False, "--no-binding", help="Disable route model binding (enabled by default)"),
+    validation: bool = typer.Option(False, "--validation", "-v", help="Generate FormRequest classes for validation"),
 ):
-    """Create model, controller, and routes all at once"""
+    """
+    Create model, controller, and routes all at once.
+
+    Uses Active Record pattern and Route Model Binding by default.
+
+    Examples:
+        fastpy make:resource Post -f title:string:required -f body:text -m -p
+        fastpy make:resource Product -f name:string:required -f price:decimal:required -m
+        fastpy make:resource Contact -f name:string:required -f email:email:required -m -p -v
+    """
     console.print(f"[cyan]Creating resource:[/cyan] {name}\n")
 
     # Create model
@@ -867,7 +845,14 @@ def make_resource(
             make_model(name, fields=None, interactive=False, migration=False)
 
     make_controller(name)
-    make_route(name, protected=protected, binding=binding)
+
+    # Generate FormRequest classes if validation is enabled
+    if validation:
+        model_name = to_pascal_case(name)
+        make_request(f"Create{model_name}", fields=None, model=name, update=False)
+        make_request(f"Update{model_name}", fields=None, model=name, update=True)
+
+    make_route(name, protected=protected, no_binding=no_binding, validation=validation)
 
     if migration:
         table_name = pluralize(to_snake_case(name))
@@ -876,6 +861,10 @@ def make_resource(
         console.print("  alembic upgrade head")
 
     console.print(f"\n[green]✓ Resource '{name}' created successfully![/green]")
+    features = ["Active Record", "Route Model Binding"]
+    if validation:
+        features.append("FormRequest Validation")
+    console.print(f"[cyan]Using: {' + '.join(features)}[/cyan]")
 
 
 # ============================================
@@ -1033,12 +1022,12 @@ async def create(request: {request_name} = validated({request_name})):
 
 @app.command("make:service")
 def make_service(name: str = typer.Argument(..., help="Service name (e.g., Payment)")):
-    """Create a new service class"""
+    """Create a new service class using Active Record pattern"""
     service_name = to_pascal_case(name) + "Service"
     model_name = to_pascal_case(name)
-    repo_name = to_pascal_case(name) + "Repository"
     file_name = to_snake_case(name) + "_service.py"
     file_path = Path(f"app/services/{file_name}")
+    snake_name = to_snake_case(name)
 
     if file_path.exists():
         console.print(f"[red]Service already exists:[/red] {file_path}")
@@ -1046,44 +1035,105 @@ def make_service(name: str = typer.Argument(..., help="Service name (e.g., Payme
 
     service_template = f'''"""
 {model_name} service for business logic.
+
+Uses Active Record pattern - no repository or session dependencies needed.
 """
 from typing import Any, Dict, List, Optional
 
-from app.services.base import BaseService
-from app.repositories.{to_snake_case(name)}_repository import {repo_name}
-from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create, {model_name}Update
+from app.models.{snake_name} import {model_name}, {model_name}Create, {model_name}Update
+from app.utils.exceptions import NotFoundException
 
 
-class {service_name}(BaseService[{model_name}, {repo_name}]):
-    """Service for {model_name} operations"""
+class {service_name}:
+    """
+    Service for {model_name} business logic.
 
-    repository_class = {repo_name}
+    Uses Active Record pattern for database operations.
+    Add complex business logic here that doesn't belong in controllers.
+    """
 
-    async def create_{to_snake_case(name)}(self, data: {model_name}Create) -> {model_name}:
-        """Create a new {to_snake_case(name)} with business logic"""
-        # Add any business logic here
-        return await self.repository.create(data.model_dump())
+    @staticmethod
+    async def create({snake_name}_data: {model_name}Create) -> {model_name}:
+        """
+        Create a new {snake_name} with business logic.
 
-    async def update_{to_snake_case(name)}(self, id: int, data: {model_name}Update) -> {model_name}:
-        """Update a {to_snake_case(name)} with business logic"""
-        # Add any business logic here
-        return await self.repository.update(id, data.model_dump(exclude_unset=True))
+        Add any pre/post processing, validation, or side effects here.
+        """
+        # Example: Add business logic before creation
+        data = {snake_name}_data.model_dump()
 
-    # Add custom business methods here
+        # Create using Active Record
+        return await {model_name}.create(**data)
+
+    @staticmethod
+    async def update(id: int, {snake_name}_data: {model_name}Update) -> {model_name}:
+        """
+        Update a {snake_name} with business logic.
+
+        Add any pre/post processing, validation, or side effects here.
+        """
+        {snake_name} = await {model_name}.find_or_fail(id)
+
+        # Example: Add business logic before update
+        data = {snake_name}_data.model_dump(exclude_unset=True)
+
+        # Update using Active Record
+        await {snake_name}.update(**data)
+        return {snake_name}
+
+    @staticmethod
+    async def delete(id: int, force: bool = False) -> None:
+        """Delete a {snake_name} (soft delete by default)"""
+        {snake_name} = await {model_name}.find_or_fail(id)
+        await {snake_name}.delete(force=force)
+
+    @staticmethod
+    async def get_by_id(id: int) -> {model_name}:
+        """Get {snake_name} by ID or raise 404"""
+        return await {model_name}.find_or_fail(id)
+
+    @staticmethod
+    async def get_all(skip: int = 0, limit: int = 100) -> List[{model_name}]:
+        """Get all {snake_name}s with pagination"""
+        return await {model_name}.query().limit(limit).offset(skip).get()
+
+    @staticmethod
+    async def get_paginated(page: int = 1, per_page: int = 20) -> Dict[str, Any]:
+        """Get paginated {snake_name}s"""
+        return await {model_name}.query().paginate(page=page, per_page=per_page)
+
+    # ==========================================================================
+    # CUSTOM BUSINESS LOGIC - Add your methods below
+    # ==========================================================================
+
+    # Example: Complex business operation
+    # @staticmethod
+    # async def process_{snake_name}(id: int) -> {model_name}:
+    #     """Example of complex business logic"""
+    #     {snake_name} = await {model_name}.find_or_fail(id)
+    #
+    #     # Complex logic here...
+    #     # - Validate business rules
+    #     # - Call external services
+    #     # - Fire events
+    #
+    #     await {snake_name}.update(processed=True)
+    #     return {snake_name}
 '''
 
     file_path.write_text(service_template)
     console.print(f"[green]✓[/green] Service created: {file_path}")
-    console.print(f"[yellow]Note:[/yellow] You may need to create the repository first with: fastcli make:repository {name}")
+    console.print("[cyan]Using Active Record pattern (no repository dependency)[/cyan]")
 
 
 @app.command("make:repository")
 def make_repository(name: str = typer.Argument(..., help="Repository name (e.g., Payment)")):
-    """Create a new repository class"""
+    """Create a new repository class (optional - Active Record is preferred)"""
     repo_name = to_pascal_case(name) + "Repository"
     model_name = to_pascal_case(name)
     file_name = to_snake_case(name) + "_repository.py"
     file_path = Path(f"app/repositories/{file_name}")
+    snake_name = to_snake_case(name)
 
     if file_path.exists():
         console.print(f"[red]Repository already exists:[/red] {file_path}")
@@ -1091,32 +1141,98 @@ def make_repository(name: str = typer.Argument(..., help="Repository name (e.g.,
 
     repo_template = f'''"""
 {model_name} repository for database operations.
+
+NOTE: In most cases, prefer using Active Record pattern directly:
+    - {model_name}.create(**data)
+    - {model_name}.find_or_fail(id)
+    - {model_name}.query().where(status='active').get()
+
+Use repositories when you need:
+    - Complex queries that don't fit in model scopes
+    - Custom caching logic
+    - Multi-model operations
+    - Testing with mocks
 """
-from typing import Optional, List
-from sqlmodel import select
+from typing import Optional, List, Dict, Any
 
-from app.repositories.base import BaseRepository
-from app.models.{to_snake_case(name)} import {model_name}
+from app.models.{snake_name} import {model_name}
 
 
-class {repo_name}(BaseRepository[{model_name}]):
-    """Repository for {model_name} model"""
+class {repo_name}:
+    """
+    Repository for {model_name} queries.
 
-    model = {model_name}
+    Uses Active Record under the hood for database operations.
+    Add complex query methods that don't fit as model scopes.
+    """
 
-    # Add custom query methods here
-    # Example:
-    # async def get_by_status(self, status: str) -> List[{model_name}]:
-    #     query = select(self.model).where(
-    #         self.model.status == status,
-    #         self.model.deleted_at.is_(None)
-    #     )
-    #     result = await self.session.execute(query)
-    #     return list(result.scalars().all())
+    @staticmethod
+    async def find_by_id(id: int) -> Optional[{model_name}]:
+        """Find {snake_name} by ID"""
+        return await {model_name}.find(id)
+
+    @staticmethod
+    async def find_or_fail(id: int) -> {model_name}:
+        """Find {snake_name} by ID or raise 404"""
+        return await {model_name}.find_or_fail(id)
+
+    @staticmethod
+    async def all(skip: int = 0, limit: int = 100) -> List[{model_name}]:
+        """Get all {snake_name}s"""
+        return await {model_name}.query().limit(limit).offset(skip).get()
+
+    @staticmethod
+    async def create(data: Dict[str, Any]) -> {model_name}:
+        """Create a new {snake_name}"""
+        return await {model_name}.create(**data)
+
+    @staticmethod
+    async def update(id: int, data: Dict[str, Any]) -> {model_name}:
+        """Update a {snake_name}"""
+        {snake_name} = await {model_name}.find_or_fail(id)
+        await {snake_name}.update(**data)
+        return {snake_name}
+
+    @staticmethod
+    async def delete(id: int, force: bool = False) -> None:
+        """Delete a {snake_name}"""
+        {snake_name} = await {model_name}.find_or_fail(id)
+        await {snake_name}.delete(force=force)
+
+    @staticmethod
+    async def count() -> int:
+        """Count total {snake_name}s"""
+        return await {model_name}.query().count()
+
+    @staticmethod
+    async def exists(id: int) -> bool:
+        """Check if {snake_name} exists"""
+        return await {model_name}.query().where(id=id).exists()
+
+    # ==========================================================================
+    # CUSTOM QUERY METHODS - Use Query Scopes when possible
+    # ==========================================================================
+
+    # Example: Complex query that might not fit as a model scope
+    # @staticmethod
+    # async def get_with_related(id: int) -> Optional[{model_name}]:
+    #     """Get {snake_name} with related data (complex join)"""
+    #     # Use raw SQLAlchemy if needed for complex queries
+    #     pass
+
+    # TIP: For simple queries, prefer model scopes:
+    # class {model_name}(BaseModel, HasScopes, table=True):
+    #     @classmethod
+    #     def scope_active(cls, query):
+    #         return query.where(cls.status == 'active')
+    #
+    # Usage: await {model_name}.query().active().get()
 '''
 
     file_path.write_text(repo_template)
     console.print(f"[green]✓[/green] Repository created: {file_path}")
+    console.print("[yellow]Note:[/yellow] Repositories are optional. Prefer Active Record and Query Scopes for most cases.")
+    console.print("[cyan]Example:[/cyan] await {model_name}.query().where(status='active').get()")
 
 
 # ============================================
@@ -1178,10 +1294,12 @@ class {middleware_name}(BaseHTTPMiddleware):
 
 @app.command("make:test")
 def make_test(name: str = typer.Argument(..., help="Test name (e.g., User)")):
-    """Create a test file for a model"""
+    """Create a test file using Active Record pattern"""
     model_name = to_pascal_case(name)
     file_name = f"test_{to_snake_case(name)}.py"
     file_path = Path(f"tests/{file_name}")
+    snake_name = to_snake_case(name)
+    plural_name = pluralize(snake_name)
 
     # Ensure tests directory exists
     Path("tests").mkdir(exist_ok=True)
@@ -1191,141 +1309,274 @@ def make_test(name: str = typer.Argument(..., help="Test name (e.g., User)")):
         raise typer.Exit(1)
 
     test_template = f'''"""
-Tests for {model_name} endpoints.
+Tests for {model_name} model and endpoints.
+
+Uses Active Record pattern for database operations.
 """
 import pytest
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import app
-from app.models.{to_snake_case(name)} import {model_name}, {model_name}Create
+from app.models.{snake_name} import {model_name}, {model_name}Create
 
+
+# =============================================================================
+# FIXTURES
+# =============================================================================
 
 @pytest.fixture
-def {to_snake_case(name)}_data():
-    """Sample {to_snake_case(name)} data for testing"""
+def {snake_name}_data():
+    """Sample {snake_name} data for testing"""
     return {{
         "name": "Test {model_name}",
         # Add more fields as needed
     }}
 
 
-class Test{model_name}Endpoints:
-    """Test suite for {model_name} API endpoints"""
+@pytest.fixture
+async def created_{snake_name}({snake_name}_data):
+    """Create a {snake_name} using Active Record for testing"""
+    {snake_name} = await {model_name}.create(**{snake_name}_data)
+    yield {snake_name}
+    # Cleanup: force delete after test
+    try:
+        await {snake_name}.delete(force=True)
+    except Exception:
+        pass
+
+
+# =============================================================================
+# ACTIVE RECORD UNIT TESTS
+# =============================================================================
+
+class Test{model_name}ActiveRecord:
+    """Test Active Record methods on {model_name} model"""
 
     @pytest.mark.asyncio
-    async def test_create_{to_snake_case(name)}(self, {to_snake_case(name)}_data):
-        """Test creating a new {to_snake_case(name)}"""
+    async def test_create_{snake_name}(self, {snake_name}_data):
+        """Test creating {snake_name} with Active Record"""
+        {snake_name} = await {model_name}.create(**{snake_name}_data)
+        assert {snake_name}.id is not None
+        assert {snake_name}.name == {snake_name}_data["name"]
+        # Cleanup
+        await {snake_name}.delete(force=True)
+
+    @pytest.mark.asyncio
+    async def test_find_{snake_name}(self, created_{snake_name}):
+        """Test finding {snake_name} by ID"""
+        found = await {model_name}.find(created_{snake_name}.id)
+        assert found is not None
+        assert found.id == created_{snake_name}.id
+
+    @pytest.mark.asyncio
+    async def test_find_or_fail_{snake_name}(self, created_{snake_name}):
+        """Test find_or_fail raises on missing {snake_name}"""
+        from app.utils.exceptions import NotFoundException
+
+        # Should succeed
+        found = await {model_name}.find_or_fail(created_{snake_name}.id)
+        assert found.id == created_{snake_name}.id
+
+        # Should raise NotFoundException
+        with pytest.raises(NotFoundException):
+            await {model_name}.find_or_fail(99999)
+
+    @pytest.mark.asyncio
+    async def test_update_{snake_name}(self, created_{snake_name}):
+        """Test updating {snake_name} with Active Record"""
+        await created_{snake_name}.update(name="Updated {model_name}")
+        assert created_{snake_name}.name == "Updated {model_name}"
+
+        # Verify persisted
+        refreshed = await {model_name}.find(created_{snake_name}.id)
+        assert refreshed.name == "Updated {model_name}"
+
+    @pytest.mark.asyncio
+    async def test_soft_delete_{snake_name}(self, {snake_name}_data):
+        """Test soft delete (default behavior)"""
+        {snake_name} = await {model_name}.create(**{snake_name}_data)
+        await {snake_name}.delete()
+
+        # Should not be found in normal queries
+        found = await {model_name}.find({snake_name}.id)
+        assert found is None
+
+        # Should be found with with_trashed
+        trashed = await {model_name}.query().with_trashed().where(id={snake_name}.id).first()
+        assert trashed is not None
+        assert trashed.deleted_at is not None
+
+        # Cleanup
+        await trashed.delete(force=True)
+
+    @pytest.mark.asyncio
+    async def test_restore_{snake_name}(self, {snake_name}_data):
+        """Test restoring soft deleted {snake_name}"""
+        {snake_name} = await {model_name}.create(**{snake_name}_data)
+        await {snake_name}.delete()
+
+        # Restore
+        trashed = await {model_name}.query().with_trashed().where(id={snake_name}.id).first()
+        await trashed.restore()
+
+        # Should now be found
+        found = await {model_name}.find({snake_name}.id)
+        assert found is not None
+        assert found.deleted_at is None
+
+        # Cleanup
+        await found.delete(force=True)
+
+    @pytest.mark.asyncio
+    async def test_query_builder(self, {snake_name}_data):
+        """Test query builder and scopes"""
+        {snake_name} = await {model_name}.create(**{snake_name}_data)
+
+        # Test basic query
+        results = await {model_name}.query().get()
+        assert len(results) > 0
+
+        # Test count
+        count = await {model_name}.query().count()
+        assert count > 0
+
+        # Test exists
+        exists = await {model_name}.query().where(id={snake_name}.id).exists()
+        assert exists is True
+
+        # Cleanup
+        await {snake_name}.delete(force=True)
+
+
+# =============================================================================
+# API ENDPOINT TESTS
+# =============================================================================
+
+class Test{model_name}Endpoints:
+    """Test {model_name} API endpoints"""
+
+    @pytest.mark.asyncio
+    async def test_create_{snake_name}_endpoint(self, {snake_name}_data):
+        """Test POST /api/{plural_name}/"""
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
         ) as client:
             response = await client.post(
-                "/api/{pluralize(to_snake_case(name))}/",
-                json={to_snake_case(name)}_data
+                "/api/{plural_name}/",
+                json={snake_name}_data
             )
             assert response.status_code == 201
             data = response.json()
-            assert data["name"] == {to_snake_case(name)}_data["name"]
             assert "id" in data
+            assert data["name"] == {snake_name}_data["name"]
 
     @pytest.mark.asyncio
-    async def test_get_{to_snake_case(name)}s(self):
-        """Test getting all {to_snake_case(name)}s"""
+    async def test_get_{plural_name}_endpoint(self):
+        """Test GET /api/{plural_name}/"""
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
         ) as client:
-            response = await client.get("/api/{pluralize(to_snake_case(name))}/")
+            response = await client.get("/api/{plural_name}/")
             assert response.status_code == 200
             assert isinstance(response.json(), list)
 
     @pytest.mark.asyncio
-    async def test_get_{to_snake_case(name)}_by_id(self, {to_snake_case(name)}_data):
-        """Test getting a {to_snake_case(name)} by ID"""
+    async def test_get_{snake_name}_by_id_endpoint(self, created_{snake_name}):
+        """Test GET /api/{plural_name}/{{id}}"""
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
         ) as client:
-            # First create a {to_snake_case(name)}
-            create_response = await client.post(
-                "/api/{pluralize(to_snake_case(name))}/",
-                json={to_snake_case(name)}_data
-            )
-            created_id = create_response.json()["id"]
-
-            # Then get it
-            response = await client.get(f"/api/{pluralize(to_snake_case(name))}/{{created_id}}")
+            response = await client.get(f"/api/{plural_name}/{{created_{snake_name}.id}}")
             assert response.status_code == 200
-            assert response.json()["id"] == created_id
+            assert response.json()["id"] == created_{snake_name}.id
 
     @pytest.mark.asyncio
-    async def test_get_{to_snake_case(name)}_not_found(self):
-        """Test getting a non-existent {to_snake_case(name)}"""
+    async def test_get_{snake_name}_not_found(self):
+        """Test GET /api/{plural_name}/{{id}} returns 404"""
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
         ) as client:
-            response = await client.get("/api/{pluralize(to_snake_case(name))}/99999")
+            response = await client.get("/api/{plural_name}/99999")
             assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_update_{to_snake_case(name)}(self, {to_snake_case(name)}_data):
-        """Test updating a {to_snake_case(name)}"""
+    async def test_update_{snake_name}_endpoint(self, created_{snake_name}):
+        """Test PUT /api/{plural_name}/{{id}}"""
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
         ) as client:
-            # First create a {to_snake_case(name)}
-            create_response = await client.post(
-                "/api/{pluralize(to_snake_case(name))}/",
-                json={to_snake_case(name)}_data
-            )
-            created_id = create_response.json()["id"]
-
-            # Then update it
             update_data = {{"name": "Updated {model_name}"}}
             response = await client.put(
-                f"/api/{pluralize(to_snake_case(name))}/{{created_id}}",
+                f"/api/{plural_name}/{{created_{snake_name}.id}}",
                 json=update_data
             )
             assert response.status_code == 200
             assert response.json()["name"] == "Updated {model_name}"
 
     @pytest.mark.asyncio
-    async def test_delete_{to_snake_case(name)}(self, {to_snake_case(name)}_data):
-        """Test soft deleting a {to_snake_case(name)}"""
+    async def test_delete_{snake_name}_endpoint(self, {snake_name}_data):
+        """Test DELETE /api/{plural_name}/{{id}} (soft delete)"""
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test"
         ) as client:
-            # First create a {to_snake_case(name)}
+            # First create a {snake_name}
             create_response = await client.post(
-                "/api/{pluralize(to_snake_case(name))}/",
-                json={to_snake_case(name)}_data
+                "/api/{plural_name}/",
+                json={snake_name}_data
             )
             created_id = create_response.json()["id"]
 
-            # Then delete it
-            response = await client.delete(f"/api/{pluralize(to_snake_case(name))}/{{created_id}}")
+            # Then delete it (soft delete)
+            response = await client.delete(f"/api/{plural_name}/{{created_id}}")
             assert response.status_code == 200
 
-            # Verify it's deleted (soft delete)
-            get_response = await client.get(f"/api/{pluralize(to_snake_case(name))}/{{created_id}}")
+            # Verify it's soft deleted (not found via API)
+            get_response = await client.get(f"/api/{plural_name}/{{created_id}}")
             assert get_response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_restore_{snake_name}_endpoint(self, {snake_name}_data):
+        """Test POST /api/{plural_name}/{{id}}/restore"""
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            # Create and soft delete
+            create_response = await client.post(
+                "/api/{plural_name}/",
+                json={snake_name}_data
+            )
+            created_id = create_response.json()["id"]
+            await client.delete(f"/api/{plural_name}/{{created_id}}")
+
+            # Restore
+            response = await client.post(f"/api/{plural_name}/{{created_id}}/restore")
+            assert response.status_code == 200
+
+            # Verify restored
+            get_response = await client.get(f"/api/{plural_name}/{{created_id}}")
+            assert get_response.status_code == 200
 '''
 
     file_path.write_text(test_template)
     console.print(f"[green]✓[/green] Test file created: {file_path}")
+    console.print("[cyan]Includes Active Record unit tests and API endpoint tests[/cyan]")
 
 
 @app.command("make:factory")
 def make_factory(name: str = typer.Argument(..., help="Factory name (e.g., User)")):
-    """Create a test factory for a model"""
+    """Create a test factory with Active Record integration"""
     model_name = to_pascal_case(name)
     factory_name = to_pascal_case(name) + "Factory"
     file_name = f"{to_snake_case(name)}_factory.py"
     file_path = Path(f"tests/factories/{file_name}")
+    snake_name = to_snake_case(name)
 
     # Ensure factories directory exists
     Path("tests/factories").mkdir(parents=True, exist_ok=True)
@@ -1341,34 +1592,94 @@ def make_factory(name: str = typer.Argument(..., help="Factory name (e.g., User)
 
     factory_template = f'''"""
 Factory for {model_name} model.
+
+Uses Active Record pattern for database operations.
 """
 import factory
 from faker import Faker
+from typing import Dict, Any, List
 
-from app.models.{to_snake_case(name)} import {model_name}
+from app.models.{snake_name} import {model_name}
 
 fake = Faker()
 
 
 class {factory_name}(factory.Factory):
-    """Factory for creating {model_name} instances"""
+    """
+    Factory for creating {model_name} instances.
+
+    Usage:
+        # Build (in-memory, not persisted)
+        {snake_name} = {factory_name}.build()
+
+        # Create dictionary for API testing
+        data = {factory_name}.build_dict()
+
+        # Create via Active Record (persisted)
+        {snake_name} = await {factory_name}.create_async()
+
+        # Create batch via Active Record
+        {snake_name}s = await {factory_name}.create_batch_async(10)
+    """
 
     class Meta:
         model = {model_name}
 
+    # Define attributes (customize based on your model)
     name = factory.LazyFunction(lambda: fake.name())
-    # Add more fields as needed
-    # email = factory.LazyFunction(lambda: fake.email())
-    # description = factory.LazyFunction(lambda: fake.text())
+    # email = factory.LazyFunction(lambda: fake.unique.email())
+    # description = factory.LazyFunction(lambda: fake.text(max_nb_chars=200))
+    # is_active = True
 
     @classmethod
-    def create_batch_dict(cls, size: int) -> list:
-        """Create a batch of {model_name} dictionaries"""
-        return [cls.build().__dict__ for _ in range(size)]
+    def build_dict(cls, **kwargs) -> Dict[str, Any]:
+        """Build a dictionary for API testing"""
+        instance = cls.build(**kwargs)
+        return {{
+            k: v for k, v in instance.__dict__.items()
+            if not k.startswith('_') and v is not None
+        }}
+
+    @classmethod
+    def build_batch_dict(cls, size: int, **kwargs) -> List[Dict[str, Any]]:
+        """Build multiple dictionaries for API testing"""
+        return [cls.build_dict(**kwargs) for _ in range(size)]
+
+    @classmethod
+    async def create_async(cls, **kwargs) -> {model_name}:
+        """
+        Create and persist using Active Record.
+
+        Example:
+            {snake_name} = await {factory_name}.create_async()
+            {snake_name} = await {factory_name}.create_async(name="Custom Name")
+        """
+        data = cls.build_dict(**kwargs)
+        return await {model_name}.create(**data)
+
+    @classmethod
+    async def create_batch_async(cls, size: int, **kwargs) -> List[{model_name}]:
+        """
+        Create multiple records using Active Record.
+
+        Example:
+            {snake_name}s = await {factory_name}.create_batch_async(10)
+        """
+        return [await cls.create_async(**kwargs) for _ in range(size)]
+
+    @classmethod
+    async def cleanup(cls, *instances):
+        """Force delete instances (for test cleanup)"""
+        for instance in instances:
+            try:
+                await instance.delete(force=True)
+            except Exception:
+                pass
 '''
 
     file_path.write_text(factory_template)
     console.print(f"[green]✓[/green] Factory created: {file_path}")
+    console.print("[cyan]Includes Active Record async methods for database testing[/cyan]")
 
 
 # ============================================
@@ -1855,6 +2166,21 @@ def generate_ai_config(provider: str) -> str:
 
 Production-ready FastAPI starter with SQLModel, PostgreSQL/MySQL support, JWT authentication, MVC architecture, and FastCLI code generator.
 
+## Key Architectural Principles
+
+This project follows **Laravel-style patterns** adapted for Python/FastAPI:
+
+1. **Active Record Pattern** - Models handle their own persistence (no session passing)
+2. **Route Model Binding** - Auto-resolve route `{id}` params to model instances (enabled by default)
+3. **Model Concerns** - Laravel-style traits (`HasScopes`, `GuardsAttributes`, `HasCasts`, etc.)
+4. **FormRequest Validation** - Laravel-style validation with `rules`, `messages`, `authorize()`
+5. **Soft Deletes by Default** - `deleted_at` timestamp, `delete()` vs `delete(force=True)`
+6. **Query Scopes** - Reusable, chainable query constraints
+7. **Facades for Common Services** - Clean interfaces for Http, Mail, Cache, Storage, Queue, Events
+8. **Code Generation with Sensible Defaults** - Generators include best practices automatically
+9. **MVC + Repository/Service Pattern Support** - Flexible architecture options
+10. **Standard Response Format** - Consistent API responses with `success_response()`, `error_response()`
+
 ## Technology Stack
 
 - **Framework**: FastAPI (async/await)
@@ -1882,21 +2208,30 @@ fastpy route:list
 ## Code Generation (FastCLI)
 
 ```bash
-# Generate complete resource (model + controller + routes)
+# Generate complete resource with ALL best practices:
+# - Active Record pattern
+# - Route Model Binding (auto-resolve {id} to model)
+# - Model Concerns (HasScopes, GuardsAttributes)
+# - Soft deletes
 fastpy make:resource Post -f title:string:required,max:200 -f body:text:required -m -p
 
-# With route model binding (auto-resolve models from route params)
-fastpy make:resource Post -f title:string:required -m -p --binding
+# With FormRequest validation (Laravel-style)
+fastpy make:resource Post -f title:string:required -m -p -v
+
+# Disable route model binding if needed
+fastpy make:resource Post -f title:string:required -m -p --no-binding
 
 # Individual generators
-fastpy make:model Post -f title:string:required -m      # Model + migration
-fastpy make:controller Post                              # Controller
-fastpy make:route Post --protected                       # Routes (with auth)
-fastpy make:route Post --protected --binding             # Routes with model binding
+fastpy make:model Post -f title:string:required -m      # Model + migration + concerns
+fastpy make:controller Post                              # Active Record controller
+fastpy make:route Post --protected                       # Routes with binding (default)
+fastpy make:route Post --protected --no-binding          # Routes without binding
+fastpy make:route Post --protected --validation          # Routes with FormRequest
+fastpy make:request CreatePost --model Post              # FormRequest class
+fastpy make:request UpdatePost --model Post --update     # Update FormRequest
 fastpy make:service Post                                 # Service class
 fastpy make:repository Post                              # Repository class
 fastpy make:middleware Logging                           # Middleware
-fastpy make:request CreatePost -f title:required -f body:required  # Form request
 fastpy make:test Post                                    # Test file
 fastpy make:factory Post                                 # Test factory
 fastpy make:seeder Post                                  # Database seeder
@@ -2256,7 +2591,7 @@ with Unguarded(User):
 
 ## Route Model Binding
 
-Auto-resolve route parameters to model instances:
+Auto-resolve route parameters to model instances (enabled by default in generated routes):
 
 ```python
 from app.utils.binding import bind, bind_or_fail, bind_trashed
@@ -2283,6 +2618,61 @@ async def restore_post(post: Post = bind_trashed(Post)):
     await post.restore()
     return post
 ```
+
+## FormRequest Validation (Laravel-style)
+
+Validate requests using declarative rule classes:
+
+```python
+from app.validation import FormRequest, validated
+
+class CreatePostRequest(FormRequest):
+    rules = {
+        'title': 'required|max:200',
+        'body': 'required',
+        'slug': 'required|unique:posts',
+        'published': 'boolean',
+    }
+
+    messages = {
+        'title.required': 'Please provide a title.',
+        'slug.unique': 'This slug is already taken.',
+    }
+
+    def authorize(self, user=None) -> bool:
+        return user is not None  # Only authenticated users
+
+# Use with validated() dependency
+@router.post("/posts")
+async def create(request: CreatePostRequest = validated(CreatePostRequest)):
+    return await Post.create(**request.validated_data)
+
+# Combine with Route Model Binding for updates
+@router.put("/posts/{id}")
+async def update(
+    post: Post = bind_or_fail(Post),
+    request: UpdatePostRequest = validated(UpdatePostRequest)
+):
+    await post.update(**request.validated_data)
+    return post
+```
+
+### Available Validation Rules
+
+| Rule | Description | Example |
+|------|-------------|---------|
+| `required` | Field is required | `'name': 'required'` |
+| `nullable` | Field can be null | `'bio': 'nullable'` |
+| `email` | Valid email format | `'email': 'required\\|email'` |
+| `max:N` | Maximum length/value | `'title': 'max:200'` |
+| `min:N` | Minimum length/value | `'password': 'min:8'` |
+| `unique:table` | Unique in database | `'email': 'unique:users'` |
+| `exists:table` | Must exist in database | `'user_id': 'exists:users'` |
+| `in:a,b,c` | Value in list | `'status': 'in:active,inactive'` |
+| `confirmed` | Field matches `{field}_confirmation` | `'password': 'confirmed'` |
+| `integer` | Must be integer | `'age': 'integer'` |
+| `numeric` | Must be numeric | `'price': 'numeric'` |
+| `boolean` | Must be boolean | `'active': 'boolean'` |
 
 ## Authentication Endpoints
 
@@ -3340,6 +3730,158 @@ def cmd_service_logs(
 
 
 # ============================================
+# Setup Commands
+# ============================================
+
+@app.command("setup")
+def cmd_setup(
+    skip_db: bool = typer.Option(False, "--skip-db", help="Skip database configuration"),
+    skip_migrations: bool = typer.Option(False, "--skip-migrations", help="Skip migrations"),
+    skip_admin: bool = typer.Option(False, "--skip-admin", help="Skip admin user creation"),
+    skip_hooks: bool = typer.Option(False, "--skip-hooks", help="Skip pre-commit hooks"),
+):
+    """
+    Complete interactive project setup.
+
+    Run after creating venv and installing dependencies. Handles database config,
+    migrations, admin user, and pre-commit hooks.
+
+    Examples:
+        fastpy setup                    # Full interactive setup
+        fastpy setup --skip-db          # Skip database configuration
+        fastpy setup --skip-migrations  # Setup without running migrations
+    """
+    from app.cli.setup import full_setup
+    full_setup(
+        skip_db=skip_db,
+        skip_migrations=skip_migrations,
+        skip_admin=skip_admin,
+        skip_hooks=skip_hooks,
+    )
+
+
+@app.command("setup:env")
+def cmd_setup_env():
+    """
+    Initialize .env file from .env.example.
+
+    Creates backup if .env already exists.
+    """
+    from app.cli.setup import setup_env
+    setup_env()
+
+
+@app.command("setup:db")
+def cmd_setup_db(
+    driver: str = typer.Option(None, "--driver", "-d", help="Database driver (mysql, postgresql, sqlite)"),
+    host: str = typer.Option(None, "--host", "-h", help="Database host"),
+    port: int = typer.Option(None, "--port", "-p", help="Database port"),
+    username: str = typer.Option(None, "--username", "-u", help="Database username"),
+    password: str = typer.Option(None, "--password", help="Database password"),
+    database: str = typer.Option(None, "--database", "-n", help="Database name"),
+    no_create: bool = typer.Option(False, "--no-create", help="Don't create database"),
+    non_interactive: bool = typer.Option(False, "--yes", "-y", help="Non-interactive mode"),
+):
+    """
+    Configure database connection.
+
+    Supports MySQL, PostgreSQL, and SQLite. Updates .env file and optionally
+    creates the database.
+
+    Examples:
+        fastpy setup:db                              # Interactive setup
+        fastpy setup:db -d mysql -n my_app          # MySQL with database name
+        fastpy setup:db -d postgresql --no-create   # PostgreSQL without auto-create
+        fastpy setup:db -d sqlite                   # SQLite (no server needed)
+    """
+    from app.cli.setup import setup_db
+    setup_db(
+        driver=driver,
+        host=host,
+        port=port,
+        username=username,
+        password=password,
+        database=database,
+        create=not no_create,
+        interactive=not non_interactive,
+    )
+
+
+@app.command("setup:secret")
+def cmd_setup_secret(
+    length: int = typer.Option(64, "--length", "-l", help="Secret key length"),
+):
+    """
+    Generate secure secret key for JWT tokens.
+
+    Uses Python's cryptographic random for security.
+    Updates SECRET_KEY in .env file.
+
+    Examples:
+        fastpy setup:secret             # Generate 64-char key
+        fastpy setup:secret -l 128      # Generate 128-char key
+    """
+    from app.cli.setup import setup_secret
+    setup_secret(length=length)
+
+
+@app.command("setup:hooks")
+def cmd_setup_hooks():
+    """
+    Install pre-commit hooks for code quality.
+
+    Requires git repository and pre-commit package.
+
+    Examples:
+        fastpy setup:hooks
+    """
+    from app.cli.setup import setup_hooks
+    setup_hooks()
+
+
+@app.command("make:admin")
+def cmd_make_admin(
+    name: str = typer.Option(None, "--name", "-n", help="Admin name"),
+    email: str = typer.Option(None, "--email", "-e", help="Admin email"),
+    password: str = typer.Option(None, "--password", "-p", help="Admin password"),
+    non_interactive: bool = typer.Option(False, "--yes", "-y", help="Non-interactive mode"),
+):
+    """
+    Create a super admin user.
+
+    Requires database to be configured and migrations to be run.
+
+    Examples:
+        fastpy make:admin                                           # Interactive
+        fastpy make:admin -n "Admin" -e admin@example.com -p secret # Non-interactive
+    """
+    from app.cli.setup import setup_admin
+    setup_admin(
+        name=name,
+        email=email,
+        password=password,
+        interactive=not non_interactive,
+    )
+
+
+@app.command("db:setup")
+def cmd_db_setup(
+    auto_generate: bool = typer.Option(True, "--auto-generate/--no-auto-generate", help="Auto-generate initial migration"),
+):
+    """
+    Run database migrations.
+
+    Optionally generates initial migration if none exist.
+
+    Examples:
+        fastpy db:setup                 # Run migrations
+        fastpy db:setup --no-auto-generate  # Skip auto-generation
+    """
+    from app.cli.setup import run_migrations
+    run_migrations(auto_generate=auto_generate)
+
+
+# ============================================
 # Update List Command with Deploy Commands
 # ============================================
 
@@ -3398,6 +3940,13 @@ def list_all_commands():
         ("service:restart", "Restart service", "sudo fastpy service:restart"),
         ("service:status", "Service status", "fastpy service:status"),
         ("service:logs", "View logs", "fastpy service:logs -f"),
+        # Setup
+        ("setup", "Full interactive setup", "fastpy setup"),
+        ("setup:env", "Initialize .env file", "fastpy setup:env"),
+        ("setup:db", "Configure database", "fastpy setup:db -d mysql"),
+        ("setup:secret", "Generate secret key", "fastpy setup:secret"),
+        ("setup:hooks", "Install pre-commit", "fastpy setup:hooks"),
+        ("make:admin", "Create admin user", "fastpy make:admin"),
         # Other
         ("init:ai", "AI config file", "fastpy init:ai claude"),
         ("update", "Update Fastpy files", "fastpy update --cli"),
