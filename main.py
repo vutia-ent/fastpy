@@ -11,6 +11,7 @@ from app.routes.health_routes import router as health_router
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.timing import TimingMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.session_context import SessionContextMiddleware
 from app.utils.exceptions import (
     AppException,
     app_exception_handler,
@@ -76,6 +77,9 @@ app.add_middleware(TimingMiddleware)
 
 # 4. Request ID middleware
 app.add_middleware(RequestIDMiddleware)
+
+# 5. Session context middleware (enables Active Record pattern)
+app.add_middleware(SessionContextMiddleware)
 
 # Include routers
 app.include_router(health_router, prefix="/health", tags=["Health"])

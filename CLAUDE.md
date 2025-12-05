@@ -170,6 +170,216 @@ All models inherit from `BaseModel` which provides:
 - `is_deleted` - Property to check if deleted
 - `touch()` - Update timestamps
 
+### Active Record Methods
+
+```python
+# Create
+user = await User.create(name="John", email="john@example.com")
+
+# Find
+user = await User.find(1)                          # Returns None if not found
+user = await User.find_or_fail(1)                  # Raises NotFoundException
+
+# Query
+users = await User.where(active=True)              # List of matching records
+user = await User.first_where(email="john@example.com")
+user = await User.first_or_fail(email="john@example.com")
+
+# Update
+user.name = "Jane"
+await user.save()
+
+await user.update(name="Jane", email="jane@example.com")
+
+# Delete
+await user.delete()              # Soft delete
+await user.delete(force=True)    # Hard delete
+```
+
+## Model Concerns (Laravel-style Traits)
+
+Mix in Laravel-style functionality to your models:
+
+```python
+from app.models.base import BaseModel
+from app.models.concerns import (
+    HasCasts, HasAttributes, HasEvents, HasScopes, GuardsAttributes
+)
+
+class Post(BaseModel, HasCasts, HasAttributes, HasEvents, HasScopes, GuardsAttributes, table=True):
+    # ... model definition
+```
+
+### Attribute Casting
+
+Auto-convert database values to Python types:
+
+```python
+class Post(BaseModel, HasCasts, table=True):
+    _casts = {
+        'settings': 'json',        # JSON string <-> dict
+        'is_active': 'boolean',    # 1/0 <-> True/False
+        'metadata': 'dict',        # Ensure dict type
+        'tags': 'list',            # Ensure list type
+        'price': 'decimal:2',      # Decimal with 2 places
+        'published_at': 'datetime',
+    }
+
+# Usage
+post.settings = {'featured': True}  # Stored as JSON string
+print(post.settings)                 # Returns dict: {'featured': True}
+```
+
+**Available cast types:** `boolean`, `integer`, `float`, `string`, `json`, `dict`, `list`, `date`, `datetime`, `decimal:N`
+
+### Accessors and Mutators
+
+Computed properties and value transformers:
+
+```python
+from app.models.concerns import accessor, mutator
+
+class User(BaseModel, HasAttributes, table=True):
+    first_name: str
+    last_name: str
+    password: str
+
+    # Virtual attributes to include in serialization
+    _appends = ['full_name']
+    _hidden = ['password']
+
+    @accessor
+    def full_name(self) -> str:
+        """Computed property."""
+        return f"{self.first_name} {self.last_name}"
+
+    @mutator('password')
+    def hash_password(self, value: str) -> str:
+        """Transform value before storing."""
+        from app.utils.auth import get_password_hash
+        return get_password_hash(value)
+
+# Usage
+user.full_name          # "John Doe"
+user.password = "secret" # Automatically hashed
+user.to_dict()          # Includes full_name, excludes password
+```
+
+### Model Events
+
+Hook into model lifecycle:
+
+```python
+from app.models.concerns import HasEvents, ModelObserver
+
+class UserObserver(ModelObserver):
+    def creating(self, user):
+        user.uuid = str(uuid4())
+
+    def created(self, user):
+        send_welcome_email(user)
+
+    def deleting(self, user):
+        # Return False to cancel deletion
+        if user.is_admin:
+            return False
+        return True
+
+class User(BaseModel, HasEvents, table=True):
+    @classmethod
+    def booted(cls):
+        cls.observe(UserObserver())
+
+        # Or inline handlers:
+        cls.creating(lambda u: setattr(u, 'uuid', str(uuid4())))
+```
+
+**Events:** `creating`, `created`, `updating`, `updated`, `saving`, `saved`, `deleting`, `deleted`, `restoring`, `restored`
+
+### Query Scopes
+
+Reusable query constraints:
+
+```python
+class Post(BaseModel, HasScopes, table=True):
+    @classmethod
+    def scope_published(cls, query):
+        return query.where(cls.is_published == True)
+
+    @classmethod
+    def scope_popular(cls, query, min_views: int = 1000):
+        return query.where(cls.views >= min_views)
+
+    @classmethod
+    def scope_by_author(cls, query, author_id: int):
+        return query.where(cls.author_id == author_id)
+
+# Fluent query building
+posts = await Post.query().published().popular(5000).latest().get()
+posts = await Post.query().by_author(1).paginate(page=2, per_page=20)
+
+# With soft deletes
+posts = await Post.query().with_trashed().get()   # Include deleted
+posts = await Post.query().only_trashed().get()   # Only deleted
+```
+
+**QueryBuilder methods:** `where()`, `where_in()`, `where_null()`, `order_by()`, `latest()`, `oldest()`, `limit()`, `offset()`, `get()`, `first()`, `count()`, `exists()`, `paginate()`
+
+### Mass Assignment Protection
+
+Protect against mass assignment vulnerabilities:
+
+```python
+class User(BaseModel, GuardsAttributes, table=True):
+    # Whitelist: only these can be mass-assigned
+    _fillable = ['name', 'email', 'password']
+
+    # OR blacklist: everything except these
+    _guarded = ['is_admin', 'role']
+
+# Safe mass assignment
+user = await User.create(**request.validated_data)  # Only fillable fields
+user.fill(name="John", is_admin=True)               # is_admin ignored
+
+# Bypass protection when needed
+user.force_fill(is_admin=True)
+
+# Temporarily disable protection
+from app.models.concerns import Unguarded
+with Unguarded(User):
+    await User.create(is_admin=True)
+```
+
+## Route Model Binding
+
+Auto-resolve route parameters to model instances:
+
+```python
+from app.utils.binding import bind, bind_or_fail, bind_trashed
+
+@router.get("/users/{id}")
+async def show_user(user: User = bind(User)):
+    return user  # Automatically fetched by ID
+
+@router.get("/posts/{slug}")
+async def show_post(post: Post = bind(Post, param="slug", field="slug")):
+    return post  # Fetched by slug field
+
+@router.put("/users/{id}")
+async def update_user(
+    user: User = bind_or_fail(User),
+    request: UpdateUserRequest = validated(UpdateUserRequest)
+):
+    await user.update(**request.validated_data)
+    return user
+
+# Include soft-deleted records
+@router.post("/posts/{id}/restore")
+async def restore_post(post: Post = bind_trashed(Post)):
+    await post.restore()
+    return post
+```
+
 ## Authentication Endpoints
 
 | Endpoint | Method | Description |

@@ -739,6 +739,155 @@ def make_resource(
 
 
 # ============================================
+# Request Command (Laravel-style FormRequest)
+# ============================================
+
+@app.command("make:request")
+def make_request(
+    name: str = typer.Argument(..., help="Request name (e.g., CreateContact)"),
+    fields: List[str] = typer.Option(
+        None,
+        "--field",
+        "-f",
+        help="Field with rules (e.g., -f email:required|email|unique:users)",
+    ),
+    model: str = typer.Option(None, "--model", "-m", help="Associated model name"),
+    update: bool = typer.Option(False, "--update", "-u", help="Generate update request (nullable fields)"),
+):
+    """
+    Create a Laravel-style form request class with validation rules.
+
+    Examples:
+        fastpy make:request CreateContact -f name:required|max:255 -f email:required|email|unique:contacts
+        fastpy make:request UpdateUser --model User --update
+        fastpy make:request StorePost -f title:required|max:200 -f body:required
+    """
+    request_name = to_pascal_case(name)
+    if not request_name.endswith("Request"):
+        request_name += "Request"
+
+    # Determine file name and path
+    base_name = name.replace("Request", "")
+    file_name = to_snake_case(base_name) + "_request.py"
+    file_path = Path(f"app/requests/{file_name}")
+
+    # Ensure requests directory exists
+    Path("app/requests").mkdir(exist_ok=True)
+    init_path = Path("app/requests/__init__.py")
+    if not init_path.exists():
+        init_path.write_text('"""Form request classes for validation."""\n')
+
+    if file_path.exists():
+        console.print(f"[red]Request already exists:[/red] {file_path}")
+        raise typer.Exit(1)
+
+    # Parse fields and generate rules
+    rules = {}
+    if fields:
+        for field_str in fields:
+            # Format: field_name:rules (e.g., email:required|email|unique:users)
+            if ":" in field_str:
+                parts = field_str.split(":", 1)
+                field_name = parts[0]
+                rules_str = parts[1]
+                rules[field_name] = rules_str
+            else:
+                rules[field_str] = "required"
+    elif model:
+        # Default rules for update vs create
+        if update:
+            rules = {
+                "name": "max:255",
+                "email": f"email|unique:{pluralize(to_snake_case(model))},email,{{id}}",
+            }
+        else:
+            rules = {
+                "name": "required|max:255",
+                "email": f"required|email|unique:{pluralize(to_snake_case(model))}",
+            }
+    else:
+        # Default example rules
+        rules = {
+            "name": "required|max:255",
+        }
+
+    # Generate rules dict as string with proper formatting
+    rules_lines = []
+    for k, v in rules.items():
+        rules_lines.append(f'        "{k}": "{v}",')
+    rules_str = "\n".join(rules_lines)
+
+    request_template = f'''"""
+{request_name} form request.
+"""
+from typing import ClassVar, Dict
+
+from app.validation.form_request import FormRequest
+
+
+class {request_name}(FormRequest):
+    """
+    Form request for {to_snake_case(base_name).replace("_", " ")} validation.
+
+    Usage:
+        from app.requests.{to_snake_case(base_name)}_request import {request_name}
+        from app.validation import validated
+
+        @router.post("/")
+        async def create(request: {request_name} = validated({request_name})):
+            return await Model.create(**request.validated_data)
+    """
+
+    rules: ClassVar[Dict[str, str]] = {{
+{rules_str}
+    }}
+
+    # Custom error messages (optional)
+    messages: ClassVar[Dict[str, str]] = {{
+        # "field.rule": "Custom error message",
+    }}
+
+    # Custom attribute names for error messages (optional)
+    attributes: ClassVar[Dict[str, str]] = {{
+        # "field": "readable name",
+    }}
+
+    def authorize(self, user=None) -> bool:
+        """
+        Determine if the user is authorized to make this request.
+        Override to add custom authorization logic.
+        """
+        return True
+
+    def prepare_for_validation(self, data: Dict) -> Dict:
+        """
+        Transform data before validation.
+        Override to add custom transformations (e.g., trim strings).
+        """
+        return data
+'''
+
+    file_path.write_text(request_template)
+    console.print(f"[green]✓[/green] Request created: {file_path}")
+
+    # Show usage example
+    console.print("\n[yellow]Usage Example:[/yellow]")
+    console.print(f'''
+from app.requests.{to_snake_case(base_name)}_request import {request_name}
+from app.validation import validated
+
+@router.post("/")
+async def create(request: {request_name} = validated({request_name})):
+    return await Model.create(**request.validated_data)
+''')
+
+    # Show rules
+    console.print("[cyan]Validation Rules:[/cyan]")
+    for field, field_rules in rules.items():
+        console.print(f"  {field}: {field_rules}")
+
+
+# ============================================
 # Service and Repository Commands
 # ============================================
 

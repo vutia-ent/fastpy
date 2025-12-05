@@ -89,14 +89,31 @@ class ConflictException(AppException):
 
 
 class ValidationException(AppException):
-    """Validation exception"""
+    """
+    Validation exception with field-level errors.
 
-    def __init__(self, message: str = "Validation error", errors: Optional[List[str]] = None):
+    Supports both:
+    - Simple list of errors: ["Error 1", "Error 2"]
+    - Field-keyed errors: {"email": ["Invalid email"], "name": ["Required"]}
+    """
+
+    def __init__(
+        self,
+        message: str = "Validation error",
+        errors: Optional[Dict[str, List[str]]] = None
+    ):
+        # Store field errors separately
+        self.field_errors = errors or {}
+        # Convert to flat list for parent class
+        flat_errors = []
+        if errors:
+            for field, field_errs in errors.items():
+                flat_errors.extend(field_errs)
         super().__init__(
             message=message,
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             error_code="VALIDATION_ERROR",
-            errors=errors
+            errors=flat_errors if flat_errors else None
         )
 
 
@@ -150,7 +167,9 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     """Handle AppException"""
     request_id = request_id_var.get()
 
-    logger.error(
+    # Use warning for validation errors, error for others
+    log_level = logger.warning if isinstance(exc, ValidationException) else logger.error
+    log_level(
         f"AppException: {exc.message}",
         extra={
             "status_code": exc.status_code,
@@ -159,15 +178,22 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
         }
     )
 
+    # Build response content
+    content = create_error_response(
+        status_code=exc.status_code,
+        message=exc.message,
+        error_code=exc.error_code,
+        errors=exc.errors,
+        request_id=request_id
+    )
+
+    # Add field-level errors for ValidationException (Laravel-style)
+    if isinstance(exc, ValidationException) and exc.field_errors:
+        content["errors"] = exc.field_errors
+
     return JSONResponse(
         status_code=exc.status_code,
-        content=create_error_response(
-            status_code=exc.status_code,
-            message=exc.message,
-            error_code=exc.error_code,
-            errors=exc.errors,
-            request_id=request_id
-        ),
+        content=content,
         headers=exc.headers
     )
 
