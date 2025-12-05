@@ -117,6 +117,7 @@ export default defineConfig({
             { text: 'Introduction', link: '/guide/introduction' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Quick Start', link: '/guide/quickstart' },
+            { text: 'Tutorial: Build a Blog API', link: '/guide/tutorial' },
             { text: 'Configuration', link: '/guide/configuration' },
           ]
         },
@@ -146,6 +147,7 @@ export default defineConfig({
             { text: 'Introduction', link: '/guide/introduction' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Quick Start', link: '/guide/quickstart' },
+            { text: 'Tutorial: Build a Blog API', link: '/guide/tutorial' },
             { text: 'Configuration', link: '/guide/configuration' },
           ]
         },
@@ -175,6 +177,7 @@ export default defineConfig({
             { text: 'Introduction', link: '/guide/introduction' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Quick Start', link: '/guide/quickstart' },
+            { text: 'Tutorial: Build a Blog API', link: '/guide/tutorial' },
             { text: 'Configuration', link: '/guide/configuration' },
           ]
         },
