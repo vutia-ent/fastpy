@@ -2,41 +2,57 @@
 
 Fastpy includes AI-powered resource generation and configuration generators for popular AI coding assistants.
 
-## AI-Powered Resource Generation
+## ai:config
 
-Generate complete resources using natural language descriptions.
-
-```bash
-fastpy ai "Create a blog with posts, categories, and tags"
-```
-
-### Configuration
-
-Set up your preferred AI provider:
+Configure your AI provider for code generation.
 
 ```bash
-# Set provider (anthropic, openai, or ollama)
-export FASTPY_AI_PROVIDER=anthropic
+# Show current configuration and available providers
+fastpy ai:config
 
-# Set API key for your provider
-export ANTHROPIC_API_KEY=your-api-key-here
-# or
-export OPENAI_API_KEY=your-api-key-here
+# Set AI provider
+fastpy ai:config -p anthropic
+fastpy ai:config -p openai
+fastpy ai:config -p ollama
+
+# Test your connection
+fastpy ai:config --test
 ```
-
-::: tip Getting API Keys
-- **Anthropic (Claude)**: Get your key at [console.anthropic.com](https://console.anthropic.com/)
-- **OpenAI (GPT-4)**: Get your key at [platform.openai.com](https://platform.openai.com/api-keys)
-- **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
-:::
 
 ### Supported Providers
 
 | Provider | Model | API Key Variable |
 |----------|-------|------------------|
 | Anthropic | Claude Sonnet | `ANTHROPIC_API_KEY` |
-| OpenAI | GPT-4 | `OPENAI_API_KEY` |
+| OpenAI | GPT-4o | `OPENAI_API_KEY` |
 | Ollama | Llama 3.2 (local) | None required |
+
+### Quick Setup
+
+```bash
+# 1. Set provider
+fastpy ai:config -p anthropic
+
+# 2. Set API key (add to ~/.bashrc or ~/.zshrc)
+export ANTHROPIC_API_KEY=your-key-here
+
+# 3. Test connection
+fastpy ai:config --test
+```
+
+::: tip Getting API Keys
+- **Anthropic (Claude)**: [console.anthropic.com](https://console.anthropic.com/)
+- **OpenAI (GPT-4)**: [platform.openai.com](https://platform.openai.com/api-keys)
+- **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
+:::
+
+## ai
+
+Generate complete resources using natural language descriptions.
+
+```bash
+fastpy ai "Create a blog with posts, categories, and tags"
+```
 
 ### Usage
 
@@ -118,26 +134,9 @@ export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
 
 Fastpy also includes configuration generators for popular AI coding assistants. These configuration files help AI assistants understand your project structure, conventions, and available commands.
 
-## Setup During Installation
+## Configuration
 
-When running `./setup.sh`, you'll be prompted to select an AI assistant:
-
-```
-========================================
-  AI Assistant Configuration
-========================================
-
-Select an AI assistant to configure (optional):
-  1) Claude (CLAUDE.md)
-  2) GitHub Copilot (.github/copilot-instructions.md)
-  3) Cursor (.cursorrules)
-  4) Google Gemini (.gemini/instructions.md)
-  5) Skip
-```
-
-## Manual Configuration
-
-You can also generate AI configurations at any time:
+Generate AI assistant configurations using the CLI:
 
 ```bash
 # Interactive mode - choose from menu
@@ -230,7 +229,9 @@ fastpy make:exception NotFound -s 404
 ### Database Commands
 
 ```bash
-fastpy db:migrate
+fastpy db:migrate                    # Run pending migrations
+fastpy db:migrate -m "Add posts"     # Generate + run migrations
+fastpy db:make "Add slug"            # Generate migration only
 fastpy db:rollback
 fastpy db:fresh
 fastpy db:seed

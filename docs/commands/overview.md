@@ -66,6 +66,17 @@ These commands work anywhere (not just inside a Fastpy project):
 | `docs` | Open documentation in browser |
 | `libs` | List available facades |
 
+### Setup Commands
+
+| Command | Description |
+|---------|-------------|
+| `setup` | Full interactive project setup |
+| `setup:env` | Initialize .env from .env.example |
+| `setup:db` | Configure database connection |
+| `setup:secret` | Generate secure JWT secret key |
+| `setup:hooks` | Install pre-commit hooks |
+| `make:admin` | Create super admin user |
+
 ### Server Commands
 
 | Command | Description |
@@ -77,7 +88,9 @@ These commands work anywhere (not just inside a Fastpy project):
 
 | Command | Description |
 |---------|-------------|
-| `db:migrate` | Create a new migration |
+| `db:migrate` | Run pending migrations |
+| `db:migrate -m "..."` | Generate + run migrations |
+| `db:make` | Generate migration only |
 | `db:rollback` | Rollback migrations |
 | `db:fresh` | Drop all tables and re-migrate |
 | `db:seed` | Run database seeders |
@@ -104,6 +117,7 @@ These commands work anywhere (not just inside a Fastpy project):
 | Command | Description |
 |---------|-------------|
 | `ai` | Generate resources using natural language |
+| `ai:config` | Configure AI provider (anthropic, openai, ollama) |
 | `init:ai` | Generate AI assistant config (Claude, Copilot, Cursor) |
 
 ### Update Commands
@@ -174,6 +188,13 @@ See [Field Types](/fields/overview) for complete documentation.
 ## Next Steps
 
 <div class="next-steps">
+  <a href="/commands/setup" class="next-step-card">
+    <span class="step-icon">🔧</span>
+    <div class="step-content">
+      <h4>Setup Commands</h4>
+      <p>Project initialization</p>
+    </div>
+  </a>
   <a href="/commands/server" class="next-step-card">
     <span class="step-icon">🖥️</span>
     <div class="step-content">

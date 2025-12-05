@@ -4,23 +4,29 @@ Commands for managing database migrations and seeding.
 
 ## db:migrate
 
-Create a new Alembic migration.
+Run database migrations. Optionally generate a new migration first.
 
 ```bash
-fastpy db:migrate -m "Description of changes"
+# Run pending migrations only
+fastpy db:migrate
+
+# Generate migration + run all migrations
+fastpy db:migrate -m "Add posts table"
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `-m, --message` | Migration description (required) |
-| `--autogenerate` | Auto-detect model changes (default: true) |
+| `-m, --message` | Migration description (generates new migration first) |
 
 ### Examples
 
 ```bash
-# Create migration from model changes
+# Run pending migrations
+fastpy db:migrate
+
+# Create migration from model changes and run
 fastpy db:migrate -m "Create posts table"
 
 # After editing a model
@@ -29,9 +35,13 @@ fastpy db:migrate -m "Add slug to posts"
 
 ### How It Works
 
+When `-m` is provided:
 1. Compares current models with database schema
 2. Generates migration file in `alembic/versions/`
-3. Migration includes `upgrade()` and `downgrade()` functions
+3. Runs all pending migrations
+
+Without `-m`:
+1. Runs all pending migrations only
 
 ### Important Notes
 
@@ -41,6 +51,25 @@ New models must be imported in `alembic/env.py` for detection:
 from app.models.post import Post  # Add new models here
 ```
 :::
+
+## db:make
+
+Generate a new migration without running it.
+
+```bash
+fastpy db:make "Description of changes"
+```
+
+### Examples
+
+```bash
+# Generate migration only
+fastpy db:make "Add published_at to posts"
+fastpy db:make "Create categories table"
+
+# Then run when ready
+fastpy db:migrate
+```
 
 ## db:rollback
 
@@ -64,9 +93,6 @@ fastpy db:rollback
 
 # Rollback three migrations
 fastpy db:rollback --steps 3
-
-# Rollback to specific revision
-alembic downgrade abc123
 ```
 
 ## db:fresh
@@ -127,45 +153,29 @@ This creates `app/seeders/post_seeder.py`:
 
 ```python
 from app.models.post import Post
-from app.database.session import get_session
 
 class PostSeeder:
     @staticmethod
     async def run(count: int = 10):
-        async with get_session() as session:
-            for i in range(count):
-                post = Post(
-                    title=f"Post {i+1}",
-                    body=f"Content for post {i+1}",
-                    published=True
-                )
-                session.add(post)
-            await session.commit()
+        for i in range(count):
+            await Post.create(
+                title=f"Post {i+1}",
+                body=f"Content for post {i+1}",
+                published=True
+            )
 ```
 
-## Direct Alembic Commands
+## Command Summary
 
-You can also use Alembic directly:
-
-```bash
-# Create migration
-alembic revision --autogenerate -m "Description"
-
-# Apply all migrations
-alembic upgrade head
-
-# Rollback one
-alembic downgrade -1
-
-# Show history
-alembic history
-
-# Show current revision
-alembic current
-
-# Upgrade to specific revision
-alembic upgrade abc123
-```
+| Command | Description |
+|---------|-------------|
+| `fastpy db:migrate` | Run pending migrations |
+| `fastpy db:migrate -m "..."` | Generate + run migrations |
+| `fastpy db:make "..."` | Generate migration only |
+| `fastpy db:rollback` | Rollback one migration |
+| `fastpy db:rollback --steps N` | Rollback N migrations |
+| `fastpy db:fresh` | Drop all + re-migrate |
+| `fastpy db:seed` | Run all seeders |
 
 ## Migration Best Practices
 
@@ -196,11 +206,11 @@ def downgrade():
 
 ```bash
 # Apply
-alembic upgrade head
+fastpy db:migrate
 
 # Verify rollback works
-alembic downgrade -1
-alembic upgrade head
+fastpy db:rollback
+fastpy db:migrate
 ```
 
 ### 4. Data Migrations

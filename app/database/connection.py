@@ -3,6 +3,7 @@ from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, AsyncEngine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 
 from app.config.settings import settings
 from app.utils.logger import logger
@@ -91,8 +92,12 @@ async def check_db_connection() -> bool:
     """Check if database connection is healthy"""
     try:
         async with async_session_maker() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return False
+
+
+# Export engine for external use (e.g., in setup scripts)
+engine = async_engine

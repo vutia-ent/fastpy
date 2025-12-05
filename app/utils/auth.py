@@ -35,40 +35,51 @@ def generate_token(length: int = 32) -> str:
     return secrets.token_urlsafe(length)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token"""
+def _create_token(
+    data: dict,
+    token_type: str,
+    expires_delta: Optional[timedelta] = None,
+    default_expiry: Optional[timedelta] = None
+) -> str:
+    """
+    Create a JWT token with the specified type and expiry.
+
+    Args:
+        data: The payload data to encode
+        token_type: Token type identifier ('access' or 'refresh')
+        expires_delta: Optional custom expiry duration
+        default_expiry: Default expiry if expires_delta not provided
+    """
     to_encode = data.copy()
     now = datetime.now(timezone.utc)
-    if expires_delta:
-        expire = now + expires_delta
-    else:
-        expire = now + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = now + (expires_delta or default_expiry)
 
     to_encode.update({
         "exp": expire,
         "iat": now,
-        "type": "access"
+        "type": token_type
     })
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
-    return encoded_jwt
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT access token"""
+    return _create_token(
+        data=data,
+        token_type="access",
+        expires_delta=expires_delta,
+        default_expiry=timedelta(minutes=settings.access_token_expire_minutes)
+    )
 
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT refresh token"""
-    to_encode = data.copy()
-    now = datetime.now(timezone.utc)
-    if expires_delta:
-        expire = now + expires_delta
-    else:
-        expire = now + timedelta(days=settings.refresh_token_expire_days)
-
-    to_encode.update({
-        "exp": expire,
-        "iat": now,
-        "type": "refresh"
-    })
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
-    return encoded_jwt
+    return _create_token(
+        data=data,
+        token_type="refresh",
+        expires_delta=expires_delta,
+        default_expiry=timedelta(days=settings.refresh_token_expire_days)
+    )
 
 
 def decode_token(token: str) -> Optional[dict]:

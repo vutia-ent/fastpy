@@ -12,6 +12,11 @@ from starlette.responses import Response, JSONResponse
 from app.config.settings import settings
 from app.utils.logger import logger
 
+# Maximum number of clients to track before triggering cleanup
+MAX_CLIENTS = 10000
+# Cleanup when we have this many inactive clients
+CLEANUP_THRESHOLD = 5000
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
@@ -27,6 +32,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.window = window
         # Store: {client_id: [(timestamp, count), ...]}
         self.clients: Dict[str, list] = defaultdict(list)
+        self._last_cleanup = time.time()
 
     def _get_client_id(self, request: Request) -> str:
         """Get unique client identifier"""
@@ -53,6 +59,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """Get total requests in current window"""
         return sum(count for _, count in self.clients[client_id])
 
+    def _cleanup_inactive_clients(self, current_time: float) -> None:
+        """Remove inactive clients to prevent memory bloat"""
+        # Only cleanup periodically (every window period) and when we have many clients
+        if len(self.clients) < CLEANUP_THRESHOLD:
+            return
+
+        if current_time - self._last_cleanup < self.window:
+            return
+
+        self._last_cleanup = current_time
+        cutoff = current_time - self.window
+
+        # Find and remove clients with no recent activity
+        inactive_clients = [
+            client_id for client_id, requests in self.clients.items()
+            if not requests or all(ts <= cutoff for ts, _ in requests)
+        ]
+
+        for client_id in inactive_clients:
+            del self.clients[client_id]
+
+        if inactive_clients:
+            logger.debug(f"Cleaned up {len(inactive_clients)} inactive rate limit entries")
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
@@ -68,8 +98,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_id = self._get_client_id(request)
         current_time = time.time()
 
-        # Clean old requests
+        # Clean old requests and periodically cleanup inactive clients
         self._clean_old_requests(client_id, current_time)
+        self._cleanup_inactive_clients(current_time)
 
         # Check rate limit
         request_count = self._get_request_count(client_id)

@@ -7,6 +7,20 @@ import re
 from app.models.base import BaseModel, utc_now
 
 
+def validate_password_strength(password: str) -> str:
+    """
+    Validate password strength.
+    Password must be at least 8 characters with at least one letter and one digit.
+    """
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    if not re.search(r"[A-Za-z]", password):
+        raise ValueError("Password must contain at least one letter")
+    if not re.search(r"\d", password):
+        raise ValueError("Password must contain at least one digit")
+    return password
+
+
 class User(BaseModel, table=True):
     """
     User model following Laravel naming conventions.
@@ -49,13 +63,7 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         """Validate password strength"""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Za-z]", v):
-            raise ValueError("Password must contain at least one letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
+        return validate_password_strength(v)
 
 
 class UserRead(BaseModel):
@@ -82,13 +90,7 @@ class UserUpdate(BaseModel):
         """Validate password strength if provided"""
         if v is None:
             return v
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Za-z]", v):
-            raise ValueError("Password must contain at least one letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
+        return validate_password_strength(v)
 
 
 class PasswordChange(BaseModel):
@@ -101,13 +103,7 @@ class PasswordChange(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         """Validate new password strength"""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Za-z]", v):
-            raise ValueError("Password must contain at least one letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
+        return validate_password_strength(v)
 
 
 class PasswordReset(BaseModel):
@@ -120,10 +116,4 @@ class PasswordReset(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         """Validate new password strength"""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Za-z]", v):
-            raise ValueError("Password must contain at least one letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
+        return validate_password_strength(v)

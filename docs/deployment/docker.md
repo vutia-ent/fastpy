@@ -149,7 +149,7 @@ docker-compose -f docker-compose.prod.yml up -d
 docker-compose logs -f api
 
 # Run migrations
-docker-compose exec api alembic upgrade head
+docker-compose exec api fastpy db:migrate
 
 # Access shell
 docker-compose exec api bash
