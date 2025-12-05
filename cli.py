@@ -2557,14 +2557,64 @@ def cmd_deploy_systemd(
     deploy_systemd(apply=apply)
 
 
+@app.command("deploy:pm2")
+def cmd_deploy_pm2(
+    apply: bool = typer.Option(False, "--apply", "-a", help="Start with PM2"),
+):
+    """
+    Generate PM2 ecosystem configuration.
+
+    Creates ecosystem.config.js for PM2 process management.
+    PM2 is ideal for Node.js environments or when you prefer
+    a universal process manager.
+
+    Features:
+    - Auto-restart on failure
+    - Log management
+    - Cluster mode support
+    - Easy monitoring (pm2 monit)
+
+    Examples:
+        fastpy deploy:pm2              # Generate config
+        fastpy deploy:pm2 --apply      # Generate and start
+    """
+    from app.cli.deploy import deploy_pm2
+    deploy_pm2(apply=apply)
+
+
+@app.command("deploy:supervisor")
+def cmd_deploy_supervisor(
+    apply: bool = typer.Option(False, "--apply", "-a", help="Apply configuration (requires sudo)"),
+):
+    """
+    Generate Supervisor configuration.
+
+    Creates a Supervisor config file for process management.
+    Supervisor is a reliable, traditional process manager.
+
+    Features:
+    - Auto-restart on failure
+    - Process groups
+    - Web interface (optional)
+    - Log rotation
+
+    Examples:
+        fastpy deploy:supervisor              # Generate config
+        sudo fastpy deploy:supervisor --apply # Install and start
+    """
+    from app.cli.deploy import deploy_supervisor
+    deploy_supervisor(apply=apply)
+
+
 @app.command("deploy:run")
 def cmd_deploy_run(
     apply: bool = typer.Option(False, "--apply", "-a", help="Apply all configurations (requires sudo)"),
 ):
     """
-    Run full deployment (Nginx + systemd + SSL).
+    Run full deployment (Nginx + process manager + SSL).
 
     Generates all deployment configurations and optionally applies them.
+    Uses the process manager configured in deploy:init (systemd, pm2, or supervisor).
 
     Examples:
         fastpy deploy:run              # Generate all configs
