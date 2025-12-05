@@ -2469,5 +2469,474 @@ def update(
         console.print("Review changes and remove backups when satisfied.")
 
 
+# ============================================
+# Deploy Commands (Production Deployment)
+# ============================================
+
+@app.command("deploy:init")
+def cmd_deploy_init(
+    app_name: str = typer.Option(None, "--name", "-n", help="Application name"),
+    domain: str = typer.Option(None, "--domain", "-d", help="Domain name"),
+    port: int = typer.Option(8000, "--port", "-p", help="Application port"),
+    non_interactive: bool = typer.Option(False, "--yes", "-y", help="Non-interactive mode"),
+):
+    """
+    Initialize deployment configuration for production.
+
+    Creates .fastpy/deploy.json with server configuration.
+
+    Examples:
+        fastpy deploy:init
+        fastpy deploy:init --name myapp --domain api.example.com
+        fastpy deploy:init -d api.example.com -p 8000 -y
+    """
+    from app.cli.deploy import deploy_init
+    deploy_init(
+        app_name=app_name,
+        domain=domain,
+        port=port,
+        interactive=not non_interactive
+    )
+
+
+@app.command("deploy:nginx")
+def cmd_deploy_nginx(
+    apply: bool = typer.Option(False, "--apply", "-a", help="Apply configuration (requires sudo)"),
+):
+    """
+    Generate Nginx reverse proxy configuration.
+
+    Creates optimized Nginx config with:
+    - Reverse proxy to your FastAPI app
+    - WebSocket support
+    - Security headers
+    - Gzip compression
+    - SSL configuration (if enabled)
+
+    Examples:
+        fastpy deploy:nginx              # Generate config file
+        sudo fastpy deploy:nginx --apply # Apply to Nginx
+    """
+    from app.cli.deploy import deploy_nginx
+    deploy_nginx(apply=apply)
+
+
+@app.command("deploy:ssl")
+def cmd_deploy_ssl():
+    """
+    Setup SSL/TLS with Let's Encrypt.
+
+    Obtains and configures SSL certificate using certbot.
+    Requires sudo and a valid domain pointing to this server.
+
+    Example:
+        sudo fastpy deploy:ssl
+    """
+    from app.cli.deploy import deploy_ssl
+    deploy_ssl()
+
+
+@app.command("deploy:systemd")
+def cmd_deploy_systemd(
+    apply: bool = typer.Option(False, "--apply", "-a", help="Apply configuration (requires sudo)"),
+):
+    """
+    Generate systemd service for process management.
+
+    Creates a systemd service that:
+    - Runs your app with Gunicorn/Uvicorn
+    - Auto-restarts on failure
+    - Starts on boot
+    - Includes security hardening
+
+    Examples:
+        fastpy deploy:systemd              # Generate service file
+        sudo fastpy deploy:systemd --apply # Install and start service
+    """
+    from app.cli.deploy import deploy_systemd
+    deploy_systemd(apply=apply)
+
+
+@app.command("deploy:run")
+def cmd_deploy_run(
+    apply: bool = typer.Option(False, "--apply", "-a", help="Apply all configurations (requires sudo)"),
+):
+    """
+    Run full deployment (Nginx + systemd + SSL).
+
+    Generates all deployment configurations and optionally applies them.
+
+    Examples:
+        fastpy deploy:run              # Generate all configs
+        sudo fastpy deploy:run --apply # Apply everything
+    """
+    from app.cli.deploy import deploy_full
+    deploy_full(apply=apply)
+
+
+@app.command("deploy:status")
+def cmd_deploy_status():
+    """
+    Show deployment status and configuration.
+
+    Displays:
+    - Current configuration
+    - Service status
+    - Nginx status
+    - SSL certificate status
+    """
+    from app.cli.deploy import show_status
+    show_status()
+
+
+@app.command("deploy:check")
+def cmd_deploy_check():
+    """
+    Check server requirements for deployment.
+
+    Verifies that all required packages are installed:
+    - nginx
+    - certbot
+    - gunicorn
+    - uvicorn
+    """
+    from app.cli.deploy import check_requirements
+
+    requirements = check_requirements()
+
+    table = Table(title="Server Requirements")
+    table.add_column("Package", style="cyan")
+    table.add_column("Status", style="green")
+
+    for pkg, installed in requirements.items():
+        status = "[green]✓ Installed[/green]" if installed else "[red]✗ Missing[/red]"
+        table.add_row(pkg, status)
+
+    console.print(table)
+
+    missing = [k for k, v in requirements.items() if not v]
+    if missing:
+        console.print(f"\n[yellow]Missing packages:[/yellow] {', '.join(missing)}")
+        console.print("Run: [cyan]sudo fastpy deploy:install[/cyan] to install them")
+
+
+@app.command("deploy:install")
+def cmd_deploy_install():
+    """
+    Install server requirements (nginx, certbot, gunicorn).
+
+    Requires sudo. Installs:
+    - nginx
+    - certbot
+    - python3-certbot-nginx
+    - gunicorn
+    - uvicorn[standard]
+
+    Example:
+        sudo fastpy deploy:install
+    """
+    from app.cli.deploy import install_requirements
+    install_requirements()
+
+
+# ============================================
+# Domain Management Commands
+# ============================================
+
+@app.command("domain:add")
+def cmd_domain_add(
+    domain: str = typer.Argument(..., help="Domain to add (e.g., https://app.example.com)"),
+    frontend: bool = typer.Option(False, "--frontend", "-f", help="Mark as frontend domain"),
+):
+    """
+    Add a domain to allowed CORS origins.
+
+    Adds the domain to your deployment config and updates .env.
+    Use --frontend flag for frontend applications.
+
+    Examples:
+        fastpy domain:add https://app.example.com
+        fastpy domain:add https://dashboard.example.com --frontend
+        fastpy domain:add example.com  # Auto-adds https://
+    """
+    from app.cli.deploy import domain_add
+    domain_type = "frontend" if frontend else "cors"
+    domain_add(domain, domain_type)
+
+
+@app.command("domain:remove")
+def cmd_domain_remove(
+    domain: str = typer.Argument(..., help="Domain to remove"),
+):
+    """
+    Remove a domain from allowed origins.
+
+    Example:
+        fastpy domain:remove https://old-app.example.com
+    """
+    from app.cli.deploy import domain_remove
+    domain_remove(domain)
+
+
+@app.command("domain:list")
+def cmd_domain_list():
+    """
+    List all configured domains for CORS.
+
+    Shows:
+    - Primary domain
+    - CORS origins
+    - Frontend domains
+    """
+    from app.cli.deploy import domain_list
+    domain_list()
+
+
+# ============================================
+# Environment Management Commands
+# ============================================
+
+@app.command("env:set")
+def cmd_env_set(
+    key_value: str = typer.Argument(..., help="KEY=value pair to set"),
+):
+    """
+    Set an environment variable in .env file.
+
+    Examples:
+        fastpy env:set DATABASE_URL=postgresql://...
+        fastpy env:set DEBUG=false
+        fastpy env:set "SECRET_KEY=my-secret-key"
+    """
+    if "=" not in key_value:
+        console.print("[red]Error:[/red] Format must be KEY=value")
+        raise typer.Exit(1)
+
+    key, value = key_value.split("=", 1)
+    from app.cli.deploy import env_set
+    env_set(key, value)
+
+
+@app.command("env:get")
+def cmd_env_get(
+    key: str = typer.Argument(..., help="Environment variable key"),
+):
+    """
+    Get an environment variable from .env file.
+
+    Example:
+        fastpy env:get DATABASE_URL
+    """
+    from app.cli.deploy import env_get
+    value = env_get(key)
+    if value is not None:
+        console.print(f"{key}={value}")
+    else:
+        console.print(f"[yellow]{key} not found[/yellow]")
+
+
+@app.command("env:list")
+def cmd_env_list():
+    """
+    List all environment variables from .env file.
+
+    Sensitive values (secrets, passwords, keys) are masked.
+    """
+    from app.cli.deploy import env_list
+    env_list()
+
+
+# ============================================
+# Service Management Commands
+# ============================================
+
+@app.command("service:start")
+def cmd_service_start():
+    """Start the application service."""
+    from app.cli.deploy import DeployConfig
+
+    if not DeployConfig.exists():
+        console.print("[red]No deployment config found. Run 'fastpy deploy:init' first.[/red]")
+        raise typer.Exit(1)
+
+    config = DeployConfig.load()
+    result = subprocess.run(
+        ["sudo", "systemctl", "start", config.app_name],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        console.print(f"[green]✓[/green] Service {config.app_name} started")
+    else:
+        console.print(f"[red]✗[/red] Failed to start: {result.stderr}")
+
+
+@app.command("service:stop")
+def cmd_service_stop():
+    """Stop the application service."""
+    from app.cli.deploy import DeployConfig
+
+    if not DeployConfig.exists():
+        console.print("[red]No deployment config found.[/red]")
+        raise typer.Exit(1)
+
+    config = DeployConfig.load()
+    result = subprocess.run(
+        ["sudo", "systemctl", "stop", config.app_name],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        console.print(f"[green]✓[/green] Service {config.app_name} stopped")
+    else:
+        console.print(f"[red]✗[/red] Failed to stop: {result.stderr}")
+
+
+@app.command("service:restart")
+def cmd_service_restart():
+    """Restart the application service."""
+    from app.cli.deploy import DeployConfig
+
+    if not DeployConfig.exists():
+        console.print("[red]No deployment config found.[/red]")
+        raise typer.Exit(1)
+
+    config = DeployConfig.load()
+    result = subprocess.run(
+        ["sudo", "systemctl", "restart", config.app_name],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        console.print(f"[green]✓[/green] Service {config.app_name} restarted")
+    else:
+        console.print(f"[red]✗[/red] Failed to restart: {result.stderr}")
+
+
+@app.command("service:status")
+def cmd_service_status():
+    """Show application service status."""
+    from app.cli.deploy import DeployConfig
+
+    if not DeployConfig.exists():
+        console.print("[red]No deployment config found.[/red]")
+        raise typer.Exit(1)
+
+    config = DeployConfig.load()
+    result = subprocess.run(
+        ["systemctl", "status", config.app_name],
+        capture_output=True, text=True
+    )
+    console.print(result.stdout)
+    if result.stderr:
+        console.print(result.stderr)
+
+
+@app.command("service:logs")
+def cmd_service_logs(
+    follow: bool = typer.Option(False, "--follow", "-f", help="Follow log output"),
+    lines: int = typer.Option(50, "--lines", "-n", help="Number of lines to show"),
+):
+    """
+    View application logs.
+
+    Examples:
+        fastpy service:logs
+        fastpy service:logs -f        # Follow logs
+        fastpy service:logs -n 100    # Last 100 lines
+    """
+    from app.cli.deploy import DeployConfig
+
+    if not DeployConfig.exists():
+        console.print("[red]No deployment config found.[/red]")
+        raise typer.Exit(1)
+
+    config = DeployConfig.load()
+
+    cmd = ["journalctl", "-u", config.app_name, f"-n{lines}"]
+    if follow:
+        cmd.append("-f")
+
+    subprocess.run(cmd)
+
+
+# ============================================
+# Update List Command with Deploy Commands
+# ============================================
+
+# Override the list command to include deploy commands
+@app.command("list", hidden=True)
+def list_all_commands():
+    """List all available commands with examples"""
+    table = Table(title="FastCLI Commands")
+    table.add_column("Command", style="cyan", width=25)
+    table.add_column("Description", style="green", width=35)
+    table.add_column("Example", style="yellow")
+
+    commands = [
+        # Server
+        ("serve", "Start dev server", "fastpy serve --port 8000"),
+        ("route:list", "List all routes", "fastpy route:list"),
+        # Code generation
+        ("make:model", "Create model", "fastpy make:model Post -f title:string:required -m"),
+        ("make:controller", "Create controller", "fastpy make:controller Post"),
+        ("make:route", "Create routes", "fastpy make:route Post -p"),
+        ("make:resource", "Create all at once", "fastpy make:resource Post -i -m -p"),
+        ("make:request", "Create form request", "fastpy make:request CreatePost -f title:required"),
+        ("make:service", "Create service", "fastpy make:service Payment"),
+        ("make:repository", "Create repository", "fastpy make:repository Payment"),
+        ("make:middleware", "Create middleware", "fastpy make:middleware Logging"),
+        ("make:test", "Create test file", "fastpy make:test User"),
+        ("make:factory", "Create test factory", "fastpy make:factory User"),
+        ("make:seeder", "Create seeder", "fastpy make:seeder User"),
+        ("make:enum", "Create enum", "fastpy make:enum Status -v active -v inactive"),
+        ("make:exception", "Create exception", "fastpy make:exception NotFound -s 404"),
+        # Database
+        ("db:migrate", "Run migrations", "fastpy db:migrate"),
+        ("db:rollback", "Rollback migrations", "fastpy db:rollback -s 2"),
+        ("db:fresh", "Fresh database", "fastpy db:fresh"),
+        ("db:seed", "Run seeders", "fastpy db:seed -c 20"),
+        # Deployment
+        ("deploy:init", "Initialize deployment", "fastpy deploy:init -d api.example.com"),
+        ("deploy:nginx", "Generate Nginx config", "fastpy deploy:nginx --apply"),
+        ("deploy:ssl", "Setup SSL certificate", "sudo fastpy deploy:ssl"),
+        ("deploy:systemd", "Create systemd service", "fastpy deploy:systemd --apply"),
+        ("deploy:run", "Full deployment", "sudo fastpy deploy:run --apply"),
+        ("deploy:status", "Show deploy status", "fastpy deploy:status"),
+        ("deploy:check", "Check requirements", "fastpy deploy:check"),
+        ("deploy:install", "Install requirements", "sudo fastpy deploy:install"),
+        # Domain management
+        ("domain:add", "Add CORS domain", "fastpy domain:add https://app.example.com"),
+        ("domain:remove", "Remove domain", "fastpy domain:remove https://old.example.com"),
+        ("domain:list", "List domains", "fastpy domain:list"),
+        # Environment
+        ("env:set", "Set env variable", "fastpy env:set DEBUG=false"),
+        ("env:get", "Get env variable", "fastpy env:get DATABASE_URL"),
+        ("env:list", "List env variables", "fastpy env:list"),
+        # Service management
+        ("service:start", "Start service", "sudo fastpy service:start"),
+        ("service:stop", "Stop service", "sudo fastpy service:stop"),
+        ("service:restart", "Restart service", "sudo fastpy service:restart"),
+        ("service:status", "Service status", "fastpy service:status"),
+        ("service:logs", "View logs", "fastpy service:logs -f"),
+        # Other
+        ("init:ai", "AI config file", "fastpy init:ai claude"),
+        ("update", "Update Fastpy files", "fastpy update --cli"),
+    ]
+
+    for cmd, desc, example in commands:
+        table.add_row(cmd, desc, example)
+
+    console.print(table)
+
+    console.print("\n[cyan]Field Types:[/cyan]")
+    console.print(f"  {', '.join(FIELD_TYPES.keys())}")
+
+    console.print("\n[cyan]Validation Rules:[/cyan]")
+    console.print("  required, nullable, unique, index, max:N, min:N, gt:N, lt:N, ge:N, le:N, foreign:table.column")
+
+    console.print("\n[cyan]Deploy Quick Start:[/cyan]")
+    console.print("  1. fastpy deploy:init                    # Configure deployment")
+    console.print("  2. fastpy domain:add https://frontend.com  # Add frontend domain")
+    console.print("  3. sudo fastpy deploy:run --apply        # Deploy everything")
+
+
 if __name__ == "__main__":
     app()

@@ -74,6 +74,128 @@ fastpy libs                              # List available facades
 fastpy libs http --usage                 # Show facade usage examples
 ```
 
+## Deployment Commands
+
+Deploy your FastAPI application to production with Nginx, SSL, and systemd.
+
+### Quick Start Deployment
+
+```bash
+# 1. Initialize deployment config
+fastpy deploy:init
+
+# 2. Add frontend domains for CORS
+fastpy domain:add https://app.example.com --frontend
+fastpy domain:add https://admin.example.com --frontend
+
+# 3. Deploy everything (requires sudo on server)
+sudo fastpy deploy:run --apply
+```
+
+### Deployment Commands Reference
+
+```bash
+# Initialization
+fastpy deploy:init                       # Interactive setup wizard
+fastpy deploy:init -d api.example.com    # Quick setup with domain
+fastpy deploy:init -d api.example.com -p 8000 -y  # Non-interactive
+
+# Individual components
+fastpy deploy:nginx                      # Generate Nginx config
+sudo fastpy deploy:nginx --apply         # Apply Nginx config
+sudo fastpy deploy:ssl                   # Setup Let's Encrypt SSL
+fastpy deploy:systemd                    # Generate systemd service
+sudo fastpy deploy:systemd --apply       # Install and start service
+
+# Status and checks
+fastpy deploy:status                     # Show deployment status
+fastpy deploy:check                      # Check server requirements
+sudo fastpy deploy:install               # Install missing requirements
+```
+
+### Domain Management (CORS)
+
+```bash
+# Add domains for CORS
+fastpy domain:add https://frontend.example.com
+fastpy domain:add https://mobile-app.example.com --frontend
+fastpy domain:add localhost:3000         # Auto-adds http://
+
+# Manage domains
+fastpy domain:list                       # List all configured domains
+fastpy domain:remove https://old.example.com
+```
+
+### Environment Variables
+
+```bash
+fastpy env:set DATABASE_URL=postgresql://user:pass@localhost/db
+fastpy env:set DEBUG=false
+fastpy env:set SECRET_KEY=your-secret-key
+fastpy env:get DATABASE_URL
+fastpy env:list                          # List all (secrets masked)
+```
+
+### Service Management
+
+```bash
+sudo fastpy service:start               # Start the application
+sudo fastpy service:stop                # Stop the application
+sudo fastpy service:restart             # Restart (after code changes)
+fastpy service:status                   # Check service status
+fastpy service:logs                     # View recent logs
+fastpy service:logs -f                  # Follow logs in real-time
+fastpy service:logs -n 100              # Last 100 lines
+```
+
+### Deployment Configuration
+
+Configuration is stored in `.fastpy/deploy.json`:
+
+```json
+{
+  "app_name": "my-api",
+  "domain": "api.example.com",
+  "port": 8000,
+  "workers": 4,
+  "allowed_origins": ["https://app.example.com"],
+  "frontend_domains": ["https://dashboard.example.com"],
+  "ssl_enabled": true,
+  "ssl_type": "letsencrypt",
+  "ssl_email": "admin@example.com",
+  "user": "www-data",
+  "use_gunicorn": true
+}
+```
+
+### Generated Files
+
+| File | Purpose |
+|------|---------|
+| `.fastpy/deploy.json` | Deployment configuration |
+| `.fastpy/nginx/{app}.conf` | Nginx reverse proxy config |
+| `.fastpy/systemd/{app}.service` | Systemd service file |
+
+### Nginx Features
+
+Generated Nginx config includes:
+- Reverse proxy to Gunicorn/Uvicorn
+- WebSocket support (`/ws` endpoint)
+- SSL/TLS with Let's Encrypt (A+ rating)
+- Security headers (HSTS, X-Frame-Options, etc.)
+- Gzip compression
+- Static file serving with caching
+- CORS preflight handling
+
+### Systemd Service Features
+
+Generated service includes:
+- Gunicorn with Uvicorn workers (or direct Uvicorn)
+- Auto-restart on failure
+- Security hardening (NoNewPrivileges, PrivateTmp)
+- Environment file support
+- Logging to `/var/log/{app}/`
+
 ## Database Commands
 
 ```bash
