@@ -554,6 +554,35 @@ def run_migrations(auto_generate: bool = True):
         return False
 
 
+def upgrade_pip():
+    """Upgrade pip to latest version."""
+    console.print("[blue]Upgrading pip...[/blue]")
+    try:
+        run_command([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=False)
+        console.print("[green]✓[/green] pip upgraded")
+        return True
+    except subprocess.CalledProcessError:
+        console.print("[yellow]⚠[/yellow] Could not upgrade pip (continuing anyway)")
+        return False
+
+
+def install_requirements():
+    """Install project requirements."""
+    requirements_path = Path("requirements.txt")
+    if not requirements_path.exists():
+        console.print("[yellow]⚠[/yellow] requirements.txt not found")
+        return False
+
+    console.print("[blue]Installing requirements...[/blue]")
+    try:
+        run_command([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+        console.print("[green]✓[/green] Requirements installed")
+        return True
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]✗[/red] Failed to install requirements: {e}")
+        return False
+
+
 def install_db_driver(driver: str):
     """Install database driver package."""
     packages = {
@@ -600,37 +629,45 @@ def full_setup(
         border_style="green"
     ))
 
-    # Step 1: Environment setup
-    console.print("\n[bold]Step 1: Environment Setup[/bold]")
+    # Step 0: Upgrade pip (prevents installation issues)
+    console.print("\n[bold]Step 0: Preparing Environment[/bold]")
+    upgrade_pip()
+
+    # Step 1: Install requirements
+    console.print("\n[bold]Step 1: Installing Dependencies[/bold]")
+    install_requirements()
+
+    # Step 2: Environment setup
+    console.print("\n[bold]Step 2: Environment Setup[/bold]")
     setup_env()
 
-    # Step 2: Database configuration
+    # Step 3: Database configuration
     if not skip_db:
-        console.print("\n[bold]Step 2: Database Configuration[/bold]")
+        console.print("\n[bold]Step 3: Database Configuration[/bold]")
         config = setup_db()
 
         # Install driver
         install_db_driver(config.driver)
 
-    # Step 3: Secret key
-    console.print("\n[bold]Step 3: Security[/bold]")
+    # Step 4: Secret key
+    console.print("\n[bold]Step 4: Security[/bold]")
     setup_secret()
 
-    # Step 4: Migrations
+    # Step 5: Migrations
     if not skip_migrations:
-        console.print("\n[bold]Step 4: Database Migrations[/bold]")
+        console.print("\n[bold]Step 5: Database Migrations[/bold]")
         if Confirm.ask("Run database migrations?", default=True):
             run_migrations()
 
-            # Step 5: Admin user
+            # Step 6: Admin user
             if not skip_admin:
-                console.print("\n[bold]Step 5: Admin User[/bold]")
+                console.print("\n[bold]Step 6: Admin User[/bold]")
                 if Confirm.ask("Create super admin user?", default=True):
                     setup_admin()
 
-    # Step 6: Pre-commit hooks
+    # Step 7: Pre-commit hooks
     if not skip_hooks:
-        console.print("\n[bold]Step 6: Code Quality[/bold]")
+        console.print("\n[bold]Step 7: Code Quality[/bold]")
         if Confirm.ask("Install pre-commit hooks?", default=True):
             setup_hooks()
 
@@ -654,5 +691,7 @@ __all__ = [
     "setup_env",
     "run_migrations",
     "full_setup",
+    "upgrade_pip",
+    "install_requirements",
     "DatabaseConfig",
 ]
