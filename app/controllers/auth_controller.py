@@ -14,11 +14,13 @@ from app.utils.auth import (
     generate_token
 )
 from app.utils.token_store import token_store
+from app.utils.login_security import login_security
 from app.utils.exceptions import (
     NotFoundException,
     BadRequestException,
     UnauthorizedException,
     ConflictException,
+    RateLimitException,
 )
 from app.config.settings import settings
 
@@ -29,12 +31,16 @@ class AuthController:
     @staticmethod
     async def register(session: AsyncSession, user_data: UserCreate) -> User:
         """Register a new user"""
-        # Check if email already exists
+        # Check if email already exists (including soft-deleted users)
         query = select(User).where(User.email == user_data.email)
         result = await session.execute(query)
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
+            if existing_user.deleted_at:
+                raise ConflictException(
+                    message="Email was previously registered. Contact support to restore your account."
+                )
             raise ConflictException(message="Email already registered")
 
         # Create user with hashed password
@@ -51,14 +57,66 @@ class AuthController:
         return user
 
     @staticmethod
-    async def authenticate_user(session: AsyncSession, email: str, password: str) -> User:
-        """Authenticate a user by email and password"""
+    def check_login_allowed(ip_address: str, email: str) -> None:
+        """
+        Check if login attempt is allowed (rate limiting and lockout).
+        Raises RateLimitException if not allowed.
+        """
+        # Check IP rate limit
+        ip_allowed, ip_retry_after = login_security.check_ip_rate_limit(ip_address)
+        if not ip_allowed:
+            raise RateLimitException(
+                message=f"Too many login attempts. Try again in {ip_retry_after} seconds."
+            )
+
+        # Check account lockout
+        account_allowed, account_retry_after = login_security.check_account_lockout(email)
+        if not account_allowed:
+            raise RateLimitException(
+                message=f"Account temporarily locked. Try again in {account_retry_after} seconds."
+            )
+
+    @staticmethod
+    async def authenticate_user(
+        session: AsyncSession,
+        email: str,
+        password: str,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None
+    ) -> User:
+        """
+        Authenticate a user by email and password.
+
+        Args:
+            session: Database session
+            email: User email
+            password: User password
+            ip_address: Client IP for rate limiting and audit
+            user_agent: Client user agent for audit logging
+        """
         query = select(User).where(User.email == email, User.deleted_at.is_(None))
         result = await session.execute(query)
         user = result.scalar_one_or_none()
 
         if not user or not verify_password(password, user.password):
+            # Record failed attempt
+            if ip_address:
+                login_security.record_login_attempt(
+                    ip_address=ip_address,
+                    email=email,
+                    success=False,
+                    user_agent=user_agent
+                )
             raise UnauthorizedException(message="Incorrect email or password")
+
+        # Record successful login
+        if ip_address:
+            login_security.record_login_attempt(
+                ip_address=ip_address,
+                email=email,
+                success=True,
+                user_agent=user_agent
+            )
 
         return user
 
@@ -141,7 +199,7 @@ class AuthController:
         if not user:
             raise NotFoundException(resource="User")
 
-        user.email_verified_at = datetime.now(timezone.utc).isoformat()
+        user.email_verified_at = datetime.now(timezone.utc)
         session.add(user)
         await session.flush()
         await session.refresh(user)
@@ -178,7 +236,6 @@ class AuthController:
     ) -> User:
         """Reset user's password"""
         user.password = get_password_hash(new_password)
-        user.remember_token = None  # Clear any remember token
         user.touch()
         session.add(user)
         await session.flush()
@@ -261,7 +318,7 @@ class AuthController:
             raise NotFoundException(resource="User")
 
         # Mark email as verified
-        user.email_verified_at = datetime.now(timezone.utc).isoformat()
+        user.email_verified_at = datetime.now(timezone.utc)
         user.touch()
         session.add(user)
         await session.flush()

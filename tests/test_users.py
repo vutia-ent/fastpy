@@ -78,10 +78,12 @@ async def test_get_user_by_id(client: AsyncClient, test_user: User, auth_headers
 
 
 @pytest.mark.asyncio
-async def test_get_user_not_found(client: AsyncClient, auth_headers: dict):
-    """Test getting non-existent user."""
-    response = await client.get("/api/users/99999", headers=auth_headers)
-    assert response.status_code == 404
+async def test_get_other_user_forbidden(client: AsyncClient, auth_headers: dict, multiple_users: list[User]):
+    """Test that users cannot access other users' profiles."""
+    # Try to access another user's profile
+    other_user = multiple_users[0]
+    response = await client.get(f"/api/users/{other_user.id}", headers=auth_headers)
+    assert response.status_code == 403  # Forbidden - can only access own data
 
 
 @pytest.mark.asyncio
@@ -92,10 +94,11 @@ async def test_check_user_exists(client: AsyncClient, test_user: User, auth_head
 
 
 @pytest.mark.asyncio
-async def test_check_user_not_exists(client: AsyncClient, auth_headers: dict):
-    """Test HEAD request for non-existent user."""
-    response = await client.head("/api/users/99999", headers=auth_headers)
-    assert response.status_code == 404
+async def test_check_other_user_forbidden(client: AsyncClient, auth_headers: dict, multiple_users: list[User]):
+    """Test HEAD request for other user returns forbidden."""
+    other_user = multiple_users[0]
+    response = await client.head(f"/api/users/{other_user.id}", headers=auth_headers)
+    assert response.status_code == 403  # Forbidden - can only check own ID
 
 
 @pytest.mark.asyncio
@@ -198,3 +201,41 @@ async def test_unauthorized_access(client: AsyncClient):
     """Test that user endpoints require authentication."""
     response = await client.get("/api/users/")
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_other_user_forbidden(client: AsyncClient, auth_headers: dict, multiple_users: list[User]):
+    """Test that users cannot update other users."""
+    other_user = multiple_users[0]
+    response = await client.put(
+        f"/api/users/{other_user.id}",
+        headers=auth_headers,
+        json={"name": "Hacked Name"}
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_other_user_forbidden(client: AsyncClient, auth_headers: dict, multiple_users: list[User]):
+    """Test that users cannot delete other users."""
+    other_user = multiple_users[0]
+    response = await client.delete(f"/api/users/{other_user.id}", headers=auth_headers)
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_own_profile_via_me_endpoint(client: AsyncClient, test_user: User, auth_headers: dict):
+    """Test getting own profile via /me endpoint."""
+    response = await client.get("/api/users/me", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == test_user.id
+    assert data["email"] == test_user.email
+
+
+@pytest.mark.asyncio
+async def test_invalid_sort_field(client: AsyncClient, auth_headers: dict):
+    """Test that invalid sort fields are rejected."""
+    response = await client.get("/api/users/paginated?sort_by=password", headers=auth_headers)
+    assert response.status_code == 400
+    assert "Invalid sort field" in response.json()["detail"]
