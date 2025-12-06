@@ -342,7 +342,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/vutia-ent/fastpy/edit/main/docs/:path',
+      pattern: 'https://github.com/vutia-ent/fastpy/edit/dev/docs/:path',
       text: 'Edit this page on GitHub'
     },
 
