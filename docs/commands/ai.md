@@ -23,10 +23,8 @@ fastpy ai:config --test
 
 | Provider | Model | API Key Variable |
 |----------|-------|------------------|
-| Anthropic | Claude Sonnet 4 | `ANTHROPIC_API_KEY` |
+| Anthropic | Claude Sonnet | `ANTHROPIC_API_KEY` |
 | OpenAI | GPT-4o | `OPENAI_API_KEY` |
-| Google | Gemini 2.0 Flash | `GOOGLE_API_KEY` |
-| Groq | Llama 3.3 70B | `GROQ_API_KEY` |
 | Ollama | Llama 3.2 (local) | None required |
 
 ### Quick Setup
@@ -43,10 +41,8 @@ fastpy ai:config --test
 ```
 
 ::: tip Getting API Keys
-- **Anthropic (Claude)**: [console.anthropic.com](https://console.anthropic.com/settings/keys)
+- **Anthropic (Claude)**: [console.anthropic.com](https://console.anthropic.com/)
 - **OpenAI (GPT-4)**: [platform.openai.com](https://platform.openai.com/api-keys)
-- **Google (Gemini)**: [aistudio.google.com](https://aistudio.google.com/apikey)
-- **Groq**: [console.groq.com](https://console.groq.com/keys)
 - **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
 :::
 
@@ -105,7 +101,7 @@ AI Configuration
   Provider: anthropic
   ANTHROPIC_API_KEY: Set
 
-Set provider with: export FASTPY_AI_PROVIDER=anthropic|openai|google|groq|ollama
+Set provider with: export FASTPY_AI_PROVIDER=anthropic|openai|ollama
 ```
 
 ### Using Ollama (Free, Local)
@@ -132,55 +128,25 @@ export OLLAMA_MODEL=llama3.2      # Model to use
 export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
 ```
 
-### Using Google Gemini
-
-```bash
-# Set provider and API key
-export FASTPY_AI_PROVIDER=google
-export GOOGLE_API_KEY=your-api-key
-
-# Optional: customize model
-export GOOGLE_MODEL=gemini-2.0-flash
-
-# Use it
-fastpy ai "Create a user management system"
-```
-
-### Using Groq (Fast Inference)
-
-Groq offers extremely fast inference with open-source models:
-
-```bash
-# Set provider and API key
-export FASTPY_AI_PROVIDER=groq
-export GROQ_API_KEY=your-api-key
-
-# Optional: customize model
-export GROQ_MODEL=llama-3.3-70b-versatile
-
-# Use it
-fastpy ai "Create a product catalog"
-```
-
 ---
 
 ## AI Assistant Configuration
 
 Fastpy also includes configuration generators for popular AI coding assistants. These configuration files help AI assistants understand your project structure, conventions, and available commands.
 
-### ai:init
+## Configuration
 
 Generate AI assistant configurations using the CLI:
 
 ```bash
 # Interactive mode - choose from menu
-fastpy ai:init
+fastpy init:ai
 
 # Direct selection
-fastpy ai:init claude
-fastpy ai:init copilot
-fastpy ai:init cursor
-fastpy ai:init gemini
+fastpy init:ai claude
+fastpy init:ai copilot
+fastpy init:ai cursor
+fastpy init:ai gemini
 ```
 
 ## Supported AI Assistants
@@ -192,7 +158,7 @@ fastpy ai:init gemini
 For use with [Claude Code](https://claude.ai/code) - Anthropic's CLI tool.
 
 ```bash
-fastpy ai:init claude
+fastpy init:ai claude
 ```
 
 ### GitHub Copilot
@@ -202,7 +168,7 @@ fastpy ai:init claude
 For use with GitHub Copilot in VS Code, JetBrains, and other IDEs.
 
 ```bash
-fastpy ai:init copilot
+fastpy init:ai copilot
 ```
 
 ### Cursor AI
@@ -212,7 +178,7 @@ fastpy ai:init copilot
 For use with the [Cursor](https://cursor.sh) AI-powered code editor.
 
 ```bash
-fastpy ai:init cursor
+fastpy init:ai cursor
 ```
 
 ### Google Gemini
@@ -222,7 +188,7 @@ fastpy ai:init cursor
 For use with Google Gemini Code Assist.
 
 ```bash
-fastpy ai:init gemini
+fastpy init:ai gemini
 ```
 
 ## What's Included in the Configuration
