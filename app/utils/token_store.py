@@ -6,7 +6,8 @@ across restarts and does NOT work in distributed/multi-instance deployments.
 For production, use Redis or a database-backed token store.
 """
 import time
-from typing import Dict, Optional, Tuple
+import threading
+from typing import Dict, Optional
 from dataclasses import dataclass
 import secrets
 import hashlib
@@ -48,13 +49,15 @@ class TokenStore:
         self._tokens: Dict[str, StoredToken] = {}
         self._last_cleanup = time.time()
         self._cleanup_interval = 300  # 5 minutes
+        # Thread lock for concurrent access safety
+        self._lock = threading.Lock()
 
     def _hash_token(self, token: str) -> str:
         """Hash a token for secure storage"""
         return hashlib.sha256(token.encode()).hexdigest()
 
     def _cleanup_expired(self) -> None:
-        """Remove expired tokens"""
+        """Remove expired tokens (must be called with lock held)"""
         current_time = time.time()
         if current_time - self._last_cleanup < self._cleanup_interval:
             return
@@ -75,48 +78,50 @@ class TokenStore:
         Create a password reset token for the given email.
         Returns the plain token (not the hash) to send to the user.
         """
-        self._cleanup_expired()
+        with self._lock:
+            self._cleanup_expired()
 
-        # Invalidate any existing tokens for this email and purpose
-        self._invalidate_tokens_for_email(email, "password_reset")
+            # Invalidate any existing tokens for this email and purpose
+            self._invalidate_tokens_for_email(email, "password_reset")
 
-        token = secrets.token_urlsafe(32)
-        token_hash = self._hash_token(token)
-        current_time = time.time()
+            token = secrets.token_urlsafe(32)
+            token_hash = self._hash_token(token)
+            current_time = time.time()
 
-        self._tokens[token_hash] = StoredToken(
-            token_hash=token_hash,
-            email=email,
-            purpose="password_reset",
-            created_at=current_time,
-            expires_at=current_time + self.password_reset_expiry,
-        )
+            self._tokens[token_hash] = StoredToken(
+                token_hash=token_hash,
+                email=email,
+                purpose="password_reset",
+                created_at=current_time,
+                expires_at=current_time + self.password_reset_expiry,
+            )
 
-        return token
+            return token
 
     def create_email_verification_token(self, email: str) -> str:
         """
         Create an email verification token for the given email.
         Returns the plain token (not the hash) to send to the user.
         """
-        self._cleanup_expired()
+        with self._lock:
+            self._cleanup_expired()
 
-        # Invalidate any existing tokens for this email and purpose
-        self._invalidate_tokens_for_email(email, "email_verification")
+            # Invalidate any existing tokens for this email and purpose
+            self._invalidate_tokens_for_email(email, "email_verification")
 
-        token = secrets.token_urlsafe(32)
-        token_hash = self._hash_token(token)
-        current_time = time.time()
+            token = secrets.token_urlsafe(32)
+            token_hash = self._hash_token(token)
+            current_time = time.time()
 
-        self._tokens[token_hash] = StoredToken(
-            token_hash=token_hash,
-            email=email,
-            purpose="email_verification",
-            created_at=current_time,
-            expires_at=current_time + self.email_verification_expiry,
-        )
+            self._tokens[token_hash] = StoredToken(
+                token_hash=token_hash,
+                email=email,
+                purpose="email_verification",
+                created_at=current_time,
+                expires_at=current_time + self.email_verification_expiry,
+            )
 
-        return token
+            return token
 
     def validate_password_reset_token(self, token: str, email: str) -> bool:
         """
@@ -136,39 +141,41 @@ class TokenStore:
 
     def _validate_token(self, token: str, email: str, purpose: str) -> bool:
         """Validate a token without consuming it"""
-        self._cleanup_expired()
+        with self._lock:
+            self._cleanup_expired()
 
-        token_hash = self._hash_token(token)
-        stored = self._tokens.get(token_hash)
+            token_hash = self._hash_token(token)
+            stored = self._tokens.get(token_hash)
 
-        if not stored:
-            return False
+            if not stored:
+                return False
 
-        if stored.email.lower() != email.lower():
-            return False
+            if stored.email.lower() != email.lower():
+                return False
 
-        if stored.purpose != purpose:
-            return False
+            if stored.purpose != purpose:
+                return False
 
-        if stored.expires_at < time.time():
-            # Clean up expired token
-            del self._tokens[token_hash]
-            return False
+            if stored.expires_at < time.time():
+                # Clean up expired token
+                del self._tokens[token_hash]
+                return False
 
-        return True
+            return True
 
     def consume_token(self, token: str) -> Optional[str]:
         """
         Consume a token (delete it after use).
         Returns the email associated with the token, or None if invalid.
         """
-        token_hash = self._hash_token(token)
-        stored = self._tokens.pop(token_hash, None)
+        with self._lock:
+            token_hash = self._hash_token(token)
+            stored = self._tokens.pop(token_hash, None)
 
-        if stored and stored.expires_at >= time.time():
-            return stored.email
+            if stored and stored.expires_at >= time.time():
+                return stored.email
 
-        return None
+            return None
 
     def _invalidate_tokens_for_email(self, email: str, purpose: str) -> None:
         """Invalidate all tokens for a specific email and purpose"""

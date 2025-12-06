@@ -154,14 +154,10 @@ async def forgot_password(
         # Generate password reset token
         token = AuthController.create_password_reset_token(request.email)
 
-        # In production: send this token via email
-        # For now, log it (remove in production!)
-        logger.info(
-            f"Password reset token generated for {request.email}",
-            extra={"token": token, "note": "In production, send via email"}
-        )
+        # Log that a token was generated (but never log the token itself!)
+        logger.info(f"Password reset token generated for {request.email}")
 
-        # TODO: Integrate with email service
+        # TODO: Integrate with email service to send the token
         # await send_password_reset_email(user.email, token)
 
     # Always return success to prevent email enumeration
@@ -210,13 +206,10 @@ async def send_verification_email(
         # Generate verification token
         token = AuthController.create_email_verification_token(request.email)
 
-        # In production: send this token via email
-        logger.info(
-            f"Email verification token generated for {request.email}",
-            extra={"token": token, "note": "In production, send via email"}
-        )
+        # Log that a token was generated (but never log the token itself!)
+        logger.info(f"Email verification token generated for {request.email}")
 
-        # TODO: Integrate with email service
+        # TODO: Integrate with email service to send the token
         # await send_verification_email(user.email, token)
 
     return {
