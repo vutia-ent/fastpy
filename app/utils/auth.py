@@ -59,7 +59,7 @@ def _create_token(
         "iat": now,
         "type": token_type
     })
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(to_encode, settings.get_secret_key(), algorithm=settings.algorithm)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -85,7 +85,7 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
 def decode_token(token: str) -> Optional[dict]:
     """Decode and validate a JWT token"""
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.get_secret_key(), algorithms=[settings.algorithm])
         return payload
     except JWTError:
         return None
@@ -102,9 +102,15 @@ async def get_current_user(
     )
 
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.get_secret_key(), algorithms=[settings.algorithm])
         email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+
         if email is None:
+            raise credentials_exception
+
+        # Only accept access tokens, not refresh tokens
+        if token_type != "access":
             raise credentials_exception
     except JWTError:
         raise credentials_exception

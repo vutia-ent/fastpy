@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal, List, Optional
 import os
+import secrets as secrets_module
 
 
 class Settings(BaseSettings):
@@ -10,7 +11,7 @@ class Settings(BaseSettings):
     app_name: str = "Fastpy"
     app_version: str = "0.1.0"
     app_description: str = "Production-ready FastAPI starter with FastCLI"
-    debug: bool = True
+    debug: bool = False  # Default to False for security
     environment: Literal["development", "staging", "production"] = "development"
 
     # Server
@@ -25,14 +26,15 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
 
     # Security
-    secret_key: str = "your-secret-key-change-in-production"
+    # WARNING: Always set SECRET_KEY in production via environment variable
+    secret_key: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
     # CORS
     cors_origins: str = "*"  # Comma-separated list or "*"
-    cors_allow_credentials: bool = True
+    cors_allow_credentials: bool = False  # Must be False when cors_origins is "*"
     cors_allow_methods: str = "*"
     cors_allow_headers: str = "*"
 
@@ -40,6 +42,9 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     rate_limit_requests: int = 100
     rate_limit_window: int = 60  # seconds
+    # Trusted proxies for X-Forwarded-For header (comma-separated IPs)
+    # Only IPs in this list will be trusted for client IP extraction
+    trusted_proxies: str = ""
 
     # Logging
     log_level: str = "INFO"
@@ -107,6 +112,36 @@ class Settings(BaseSettings):
             return ["*"]
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
+    def get_cors_allow_credentials(self) -> bool:
+        """
+        Get CORS allow_credentials setting.
+        Always returns False when cors_origins is "*" for security.
+        """
+        if self.cors_origins == "*":
+            return False
+        return self.cors_allow_credentials
+
+    def get_trusted_proxies(self) -> List[str]:
+        """Get trusted proxy IPs as a list"""
+        if not self.trusted_proxies:
+            return []
+        return [ip.strip() for ip in self.trusted_proxies.split(",") if ip.strip()]
+
+    def get_secret_key(self) -> str:
+        """
+        Get the secret key, generating a random one for development if not set.
+        Raises an error in production if SECRET_KEY is not explicitly set.
+        """
+        if self.secret_key:
+            return self.secret_key
+        if self.is_production:
+            raise ValueError(
+                "SECRET_KEY must be set in production environment. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
+        # Generate a random key for development (will change on restart)
+        return secrets_module.token_urlsafe(32)
+
     @property
     def is_production(self) -> bool:
         """Check if running in production"""
@@ -116,6 +151,25 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         """Check if running in development"""
         return self.environment == "development"
+
+    def validate_production_settings(self) -> List[str]:
+        """
+        Validate that all required production settings are configured.
+        Returns a list of validation errors, empty if all is well.
+        """
+        errors = []
+        if self.is_production:
+            if not self.secret_key:
+                errors.append("SECRET_KEY must be set in production")
+            if self.secret_key and len(self.secret_key) < 32:
+                errors.append("SECRET_KEY should be at least 32 characters")
+            if self.cors_origins == "*":
+                errors.append("CORS_ORIGINS should not be '*' in production")
+            if self.debug:
+                errors.append("DEBUG should be False in production")
+            if "localhost" in self.database_url or "password" in self.database_url:
+                errors.append("DATABASE_URL appears to use default/localhost credentials")
+        return errors
 
 
 settings = Settings()

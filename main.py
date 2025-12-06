@@ -29,6 +29,24 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {settings.debug}")
+
+    # Validate production settings
+    validation_errors = settings.validate_production_settings()
+    if validation_errors:
+        for error in validation_errors:
+            logger.warning(f"Configuration warning: {error}")
+        if settings.is_production:
+            raise RuntimeError(
+                f"Production configuration errors: {'; '.join(validation_errors)}"
+            )
+
+    # Validate secret key is available
+    try:
+        _ = settings.get_secret_key()
+    except ValueError as e:
+        logger.error(str(e))
+        raise
+
     await init_db()
     logger.info("Application startup complete")
     yield
@@ -59,7 +77,7 @@ app.add_exception_handler(Exception, generic_exception_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins(),
-    allow_credentials=settings.cors_allow_credentials,
+    allow_credentials=settings.get_cors_allow_credentials(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
