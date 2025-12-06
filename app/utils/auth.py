@@ -128,5 +128,21 @@ async def get_current_user(
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """Ensure the current user is active (not deleted)"""
     if current_user.is_deleted:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive"
+        )
+    return current_user
+
+
+async def get_current_verified_user(current_user: User = Depends(get_current_active_user)) -> User:
+    """
+    Ensure the current user has verified their email.
+    Use this dependency when email verification is required for an endpoint.
+    """
+    if not current_user.email_verified_at:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required"
+        )
     return current_user

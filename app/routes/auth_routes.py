@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -9,6 +9,7 @@ from app.controllers.auth_controller import AuthController
 from app.models.user import UserCreate, UserRead, User, PasswordChange, validate_password_strength
 from app.utils.auth import get_current_active_user
 from app.utils.logger import logger
+from app.middleware.rate_limit import get_client_ip
 
 router = APIRouter()
 
@@ -68,6 +69,7 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_se
 
 @router.post("/login")
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_session),
 ) -> Dict[str, Any]:
@@ -79,12 +81,26 @@ async def login(
     - **username**: Email address
     - **password**: Password
     """
-    user = await AuthController.authenticate_user(session, form_data.username, form_data.password)
+    # Get client info for rate limiting and audit
+    ip_address = get_client_ip(request)
+    user_agent = request.headers.get("user-agent")
+
+    # Check rate limits before attempting authentication
+    AuthController.check_login_allowed(ip_address, form_data.username)
+
+    user = await AuthController.authenticate_user(
+        session,
+        form_data.username,
+        form_data.password,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
     return AuthController.create_tokens(user)
 
 
 @router.post("/login/json")
 async def login_json(
+    request: Request,
     credentials: LoginRequest,
     session: AsyncSession = Depends(get_session),
 ) -> Dict[str, Any]:
@@ -95,7 +111,20 @@ async def login_json(
     - **email**: Email address
     - **password**: Password
     """
-    user = await AuthController.authenticate_user(session, credentials.email, credentials.password)
+    # Get client info for rate limiting and audit
+    ip_address = get_client_ip(request)
+    user_agent = request.headers.get("user-agent")
+
+    # Check rate limits before attempting authentication
+    AuthController.check_login_allowed(ip_address, credentials.email)
+
+    user = await AuthController.authenticate_user(
+        session,
+        credentials.email,
+        credentials.password,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
     return AuthController.create_tokens(user)
 
 

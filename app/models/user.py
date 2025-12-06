@@ -32,9 +32,8 @@ class User(BaseModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(nullable=False, max_length=255)
     email: str = Field(nullable=False, unique=True, max_length=255, index=True)
-    email_verified_at: Optional[str] = Field(default=None, nullable=True)
+    email_verified_at: Optional[datetime] = Field(default=None, nullable=True)
     password: str = Field(nullable=False, max_length=255)
-    remember_token: Optional[str] = Field(default=None, nullable=True, max_length=100)
     # Timestamps (always last)
     created_at: datetime = Field(default_factory=utc_now, nullable=False)
     updated_at: datetime = Field(default_factory=utc_now, nullable=False)
@@ -47,7 +46,6 @@ class User(BaseModel, table=True):
             "example": {
                 "name": "John Doe",
                 "email": "john@example.com",
-                "password": "hashed_password_here",
             }
         }
 
@@ -72,7 +70,7 @@ class UserRead(BaseModel):
     id: int
     name: str
     email: str
-    email_verified_at: Optional[str]
+    email_verified_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 

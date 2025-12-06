@@ -3,7 +3,7 @@ Health check endpoints for monitoring.
 """
 from datetime import datetime, timezone
 from typing import Dict, Any
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import text
 
@@ -71,7 +71,16 @@ async def service_info() -> Dict[str, Any]:
     """
     Service information endpoint.
     Returns detailed information about the service.
+
+    Note: This endpoint is disabled in production to prevent information disclosure.
     """
+    # Restrict access in production to prevent information disclosure
+    if settings.is_production:
+        raise HTTPException(
+            status_code=404,
+            detail="Not found"
+        )
+
     return {
         "service": settings.app_name,
         "version": settings.app_version,

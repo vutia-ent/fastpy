@@ -81,7 +81,7 @@ async def test_user(db_session: AsyncSession) -> User:
         name=TEST_USER_NAME,
         email=TEST_USER_EMAIL,
         password=get_password_hash(TEST_PASSWORD),
-        email_verified_at=datetime.now(timezone.utc).isoformat()
+        email_verified_at=datetime.now(timezone.utc)
     )
     db_session.add(user)
     await db_session.commit()
