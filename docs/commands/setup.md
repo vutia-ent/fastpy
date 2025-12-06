@@ -1,20 +1,73 @@
 # Setup Commands
 
-Setup commands help initialize and configure a new Fastpy project. Run these after creating a virtual environment and installing dependencies.
+Setup commands help initialize and configure a new Fastpy project.
 
 ## Quick Start
 
-After cloning a Fastpy project and creating a virtual environment:
+### One-Command Setup (Recommended)
 
 ```bash
-# Create and activate virtual environment
-python3 -m venv venv
+# Create project with automatic setup
+fastpy new my-api --install
+cd my-api
 source venv/bin/activate
-pip install -r requirements.txt
+fastpy setup
+fastpy serve
+```
 
-# Run full interactive setup
+### Step-by-Step Setup
+
+```bash
+# Create project
+fastpy new my-api
+cd my-api
+
+# Install dependencies (creates venv + installs packages)
+fastpy install
+
+# Activate and configure
+source venv/bin/activate
 fastpy setup
 ```
+
+## fastpy install
+
+Install project dependencies and set up the development environment. This command automates virtual environment creation and package installation.
+
+```bash
+fastpy install
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--skip-setup` | Skip running the interactive setup wizard |
+| `--skip-venv` | Skip virtual environment creation |
+| `-r, --requirements` | Requirements file to install (default: requirements.txt) |
+
+### Examples
+
+```bash
+# Full install with setup wizard
+fastpy install
+
+# Install dependencies only (skip setup)
+fastpy install --skip-setup
+
+# Use different requirements file
+fastpy install -r requirements-dev.txt
+
+# Skip venv creation (use existing environment)
+fastpy install --skip-venv
+```
+
+### What It Does
+
+1. Creates virtual environment (`venv`) if it doesn't exist
+2. Upgrades pip to latest version
+3. Installs dependencies from requirements.txt
+4. Optionally runs `fastpy setup` wizard
 
 ## fastpy setup
 
@@ -266,22 +319,30 @@ fastpy db:setup --no-auto-generate
 
 ## Workflow Examples
 
-### New Project Setup
+### New Project Setup (Recommended)
 
 ```bash
-# 1. Clone and enter project
-git clone https://github.com/vutia-ent/fastpy my-api
+# One-command project creation
+fastpy new my-api --install
+cd my-api
+source venv/bin/activate
+fastpy setup
+fastpy serve
+```
+
+### New Project Setup (Step-by-Step)
+
+```bash
+# 1. Create project
+fastpy new my-api
 cd my-api
 
-# 2. Create virtual environment
-python3 -m venv venv
+# 2. Install dependencies
+fastpy install
+
+# 3. Activate and run
 source venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Run full setup
-fastpy setup
+fastpy serve
 ```
 
 ### CI/CD Pipeline Setup
@@ -314,6 +375,7 @@ fastpy make:admin
 
 | Command | Description |
 |---------|-------------|
+| `fastpy install` | Create venv, install deps, run setup |
 | `fastpy setup` | Full interactive project setup |
 | `fastpy setup:env` | Initialize .env from .env.example |
 | `fastpy setup:db` | Configure database connection |

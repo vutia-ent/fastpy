@@ -1,6 +1,6 @@
 ---
 title: Installation Guide - Fastpy
-description: Learn how to install Fastpy CLI and set up your FastAPI project with PostgreSQL or MySQL database support.
+description: Learn how to install Fastpy CLI and set up your FastAPI project with PostgreSQL, MySQL, or SQLite database support.
 head:
   - - meta
     - name: keywords
@@ -14,90 +14,122 @@ Get Fastpy up and running in your development environment.
 ## Requirements
 
 - Python 3.9 or higher
-- PostgreSQL or MySQL
+- PostgreSQL, MySQL, or SQLite
 - Git
 
-## Quick Install (Recommended)
-
-### Using Fastpy CLI
-
-The fastest way to create a new project:
+## Install Fastpy CLI
 
 ::: code-group
 
 ```bash [pip]
-# Install Fastpy CLI globally
 pip install fastpy-cli
-
-# Create a new project
-fastpy new my-api
 ```
 
 ```bash [pipx]
-# Install with pipx (isolated environment)
 pipx install fastpy-cli
-
-# Create a new project
-fastpy new my-api
 ```
 
 ```bash [Homebrew]
-# Add the tap and install
 brew tap vutia-ent/tap
 brew install fastpy
-
-# Create a new project
-fastpy new my-api
 ```
 
 :::
 
-The `fastpy new` command will:
-- Clone the Fastpy template
-- Initialize a fresh git repository
-- Optionally run the interactive setup
-
-#### CLI Options
+Verify installation:
 
 ```bash
+fastpy version
+```
+
+## Create a New Project
+
+### One-Command Setup (Recommended)
+
+Create a project with automatic environment setup:
+
+```bash
+fastpy new my-api --install
+```
+
+This will:
+- Clone the Fastpy template
+- Create a virtual environment
+- Install all dependencies
+- Display next steps
+
+Then:
+
+```bash
+cd my-api
+source venv/bin/activate  # Windows: venv\Scripts\activate
+fastpy setup              # Configure database, secrets, etc.
+fastpy serve              # Start development server
+```
+
+Visit [http://localhost:8000/docs](http://localhost:8000/docs) to see your API.
+
+### Step-by-Step Setup
+
+If you prefer more control:
+
+```bash
+# Create project
+fastpy new my-api
+cd my-api
+
+# Install dependencies (creates venv + installs packages)
+fastpy install
+
+# Activate virtual environment
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Run interactive setup
+fastpy setup
+
+# Start server
+fastpy serve
+```
+
+### CLI Options
+
+```bash
+# Create with automatic setup
+fastpy new my-api --install
+
 # Create without initializing git
 fastpy new my-api --no-git
 
-# Create from a specific branch (e.g., dev)
+# Create from a specific branch
 fastpy new my-api --branch dev
 
-# Open documentation
-fastpy docs
+# Install dependencies only (skip setup wizard)
+fastpy install --skip-setup
 
-# Upgrade CLI to latest version
-fastpy upgrade
-
-# Check your environment
-fastpy doctor
+# Use different requirements file
+fastpy install -r requirements-dev.txt
 ```
 
-### Using Git Clone
+## Using Git Clone
 
 ```bash
 # Clone the repository
 git clone https://github.com/vutia-ent/fastpy.git my-api
 cd my-api
 
-# Create virtual environment
+# Install with fastpy install
+fastpy install
+
+# Or manually:
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate
 pip install -r requirements.txt
-
-# Run interactive setup
 fastpy setup
-
-# Start the development server
-fastpy serve
 ```
 
-The `fastpy setup` command will:
+## Setup Commands
+
+The `fastpy setup` wizard will:
 - Initialize `.env` from `.env.example`
 - Configure database connection
 - Generate secure secret key
@@ -105,53 +137,55 @@ The `fastpy setup` command will:
 - Create admin user (optional)
 - Install pre-commit hooks (optional)
 
-## Manual Installation
-
-If you prefer to run each step individually:
+Run individual setup steps:
 
 ```bash
-# Clone the repository
-git clone https://github.com/vutia-ent/fastpy.git my-api
-cd my-api
+fastpy setup:env      # Initialize .env file
+fastpy setup:db       # Configure database
+fastpy setup:secret   # Generate secret key
+fastpy setup:hooks    # Install pre-commit hooks
+```
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+## Database Configuration
 
-# Install dependencies
-pip install -r requirements.txt
+### Interactive Setup
 
-# Initialize environment file
-fastpy setup:env
-
-# Configure database (interactive)
+```bash
 fastpy setup:db
-
-# Or configure database non-interactively
-fastpy setup:db -d mysql -n mydb -y
-
-# Generate secure secret key
-fastpy setup:secret
-
-# Run migrations
-fastpy db:setup
-
-# Create admin user (optional)
-fastpy make:admin
 ```
 
-## Environment Configuration
-
-Edit your `.env` file manually or use CLI commands:
+### Non-Interactive Setup
 
 ```bash
-# Using CLI (recommended)
-fastpy setup:db -d postgresql    # Configure database
-fastpy setup:secret              # Generate secret key
+# MySQL
+fastpy setup:db -d mysql -h localhost -u root -n mydb -y
 
-# Or edit .env directly
-nano .env
+# PostgreSQL
+fastpy setup:db -d postgresql -h localhost -u postgres -n mydb -y
+
+# SQLite (development)
+fastpy setup:db -d sqlite -n dev -y
 ```
+
+### Manual Configuration
+
+Edit `.env` directly:
+
+```bash
+# PostgreSQL
+DB_DRIVER=postgresql
+DATABASE_URL=postgresql://user:password@localhost:5432/mydb
+
+# MySQL
+DB_DRIVER=mysql
+DATABASE_URL=mysql://user:password@localhost:3306/mydb
+
+# SQLite
+DB_DRIVER=sqlite
+DATABASE_URL=sqlite:///./app.db
+```
+
+## Environment Variables
 
 Example `.env` configuration:
 
@@ -161,16 +195,12 @@ APP_NAME="My API"
 ENVIRONMENT=development
 DEBUG=true
 
-# Database (PostgreSQL)
+# Database
 DB_DRIVER=postgresql
 DATABASE_URL=postgresql://user:password@localhost:5432/mydb
 
-# Or MySQL
-# DB_DRIVER=mysql
-# DATABASE_URL=mysql://user:password@localhost:3306/mydb
-
 # Authentication
-SECRET_KEY=your-super-secret-key-change-this
+SECRET_KEY=your-super-secret-key
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
@@ -179,110 +209,62 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 Use `fastpy setup:secret` to generate a secure secret key automatically.
 :::
 
-## Database Setup
-
-### PostgreSQL
-
-```bash
-# Create database
-createdb mydb
-
-# Or with psql
-psql -c "CREATE DATABASE mydb;"
-```
-
-### MySQL
-
-```bash
-# Create database
-mysql -e "CREATE DATABASE mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
-
-## Verify Installation
-
-```bash
-# Start the development server
-fastpy serve
-
-# Or with uvicorn directly
-uvicorn main:app --reload
-```
-
-Visit [http://localhost:8000/docs](http://localhost:8000/docs) to see the Swagger documentation.
-
 ## Troubleshooting
 
 ### pip Not Recognized
 
-If you get `pip: command not found`, use `pip3` instead:
+Use `pip3` instead:
 
 ```bash
 pip3 install fastpy-cli
 ```
 
-::: tip Creating a pip alias
-To always use `pip3` when typing `pip`:
+Create an alias:
 
-**macOS/Linux:**
-```bash
-echo 'alias pip=pip3' >> ~/.zshrc  # or ~/.bashrc for Linux
+::: code-group
+
+```bash [macOS/Linux]
+echo 'alias pip=pip3' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-**Windows:** Python 3.x installers usually include both `pip` and `pip3`. If not, reinstall Python and check "Add to PATH".
+```powershell [Windows]
+# Reinstall Python and check "Add to PATH"
+```
+
 :::
 
-### Command Not Found
+### fastpy Command Not Found
 
-If you get `fastpy: command not found` after installing with pip, the Python scripts directory isn't in your PATH.
+The Python scripts directory isn't in your PATH.
 
-**macOS:**
-```bash
-# Add Python scripts to PATH
+::: code-group
+
+```bash [macOS]
 echo 'export PATH="'$(python3 -m site --user-base)/bin':$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-**Linux:**
-```bash
-# Add Python scripts to PATH
+```bash [Linux]
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-**Windows (PowerShell):**
-```powershell
-# Find Python scripts path
-python -m site --user-site
-
-# The Scripts folder is typically:
-# C:\Users\USERNAME\AppData\Roaming\Python\Python3X\Scripts
-
-# Add to PATH via:
-# System Properties > Environment Variables > Path > Edit > New
+```powershell [Windows]
+# Add to PATH via System Properties > Environment Variables
+# Path: C:\Users\USERNAME\AppData\Roaming\Python\Python3X\Scripts
 ```
 
-::: tip Alternative Solutions
-1. **Use pipx** - Automatically handles PATH:
-   ```bash
-   pipx install fastpy-cli
-   ```
-
-2. **Use Homebrew (macOS)** - No PATH issues:
-   ```bash
-   brew install vutia-ent/tap/fastpy
-   ```
 :::
+
+**Alternatives:**
+- Use `pipx install fastpy-cli` (handles PATH automatically)
+- Use `brew install vutia-ent/tap/fastpy` (macOS)
 
 ### MySQL Client Issues (macOS)
 
-If you encounter `mysqlclient` installation errors on macOS:
-
 ```bash
-# Install MySQL client via Homebrew
 brew install mysql-client
-
-# Add to your shell profile (zsh)
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 export LDFLAGS="-L/opt/homebrew/opt/mysql-client/lib"
 export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
@@ -290,13 +272,25 @@ export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
 
 ### bcrypt Issues
 
-For bcrypt compilation errors:
-
 ```bash
 pip install bcrypt==4.2.1 --no-binary bcrypt
+```
+
+## Verify Installation
+
+```bash
+# Check CLI version
+fastpy version
+
+# Check environment
+fastpy doctor
+
+# Start server
+fastpy serve
 ```
 
 ## Next Steps
 
 - [Quick Start](/guide/quickstart) - Build your first resource
 - [Configuration](/guide/configuration) - Deep dive into settings
+- [CLI Commands](/commands/overview) - All available commands

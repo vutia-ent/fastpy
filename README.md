@@ -77,21 +77,36 @@ A production-ready FastAPI starter template with SQLModel, PostgreSQL/MySQL supp
 
 ## Quick Start
 
+### One-Command Setup (Recommended)
+
 ```bash
-# Clone and setup
-git clone https://github.com/vutia-ent/fastpy.git && cd fastpy
+# Install CLI and create project with automatic setup
+pip install fastpy-cli
+fastpy new my-api --install
 
-# Create virtual environment
-python3 -m venv venv
+# Navigate and configure
+cd my-api
 source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run interactive setup
 fastpy setup
+fastpy serve
+```
 
-# Start the development server
+### Step-by-Step Setup
+
+```bash
+# Install CLI
+pip install fastpy-cli
+
+# Create project
+fastpy new my-api
+cd my-api
+
+# Install dependencies (creates venv + installs packages)
+fastpy install
+
+# Activate and configure
+source venv/bin/activate
+fastpy setup
 fastpy serve
 ```
 
@@ -121,7 +136,10 @@ fastpy list
 
 # Global Commands (run anywhere)
 fastpy new my-project             # Create new Fastpy project
+fastpy new my-project --install   # Create + auto-setup venv and deps
 fastpy new my-project --branch dev  # From specific branch
+fastpy install                    # Install deps (creates venv + pip install)
+fastpy install --skip-setup       # Install deps only (skip setup wizard)
 fastpy ai "Create a blog"         # AI-powered generation
 fastpy ai "Add comments" -e       # Execute automatically
 fastpy config                     # Show current config

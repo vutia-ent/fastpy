@@ -57,6 +57,8 @@ These commands work anywhere (not just inside a Fastpy project):
 | Command | Description |
 |---------|-------------|
 | `new` | Create a new Fastpy project |
+| `new --install` | Create project + auto-setup venv and deps |
+| `install` | Install deps and setup (run inside project) |
 | `ai` | AI-powered code generation from natural language |
 | `config` | Manage CLI configuration |
 | `init` | Initialize Fastpy configuration |
@@ -70,6 +72,7 @@ These commands work anywhere (not just inside a Fastpy project):
 
 | Command | Description |
 |---------|-------------|
+| `install` | Create venv, install deps, run setup wizard |
 | `setup` | Full interactive project setup |
 | `setup:env` | Initialize .env from .env.example |
 | `setup:db` | Configure database connection |
