@@ -95,6 +95,43 @@ DEFAULT_PAGE_SIZE=20
 MAX_PAGE_SIZE=100
 ```
 
+### AI Providers
+
+Configure AI providers for code generation with `fastpy ai`:
+
+```bash
+# Default AI provider: openai, anthropic, google, groq, ollama
+AI_PROVIDER=openai
+
+# OpenAI
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+
+# Anthropic (Claude)
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+
+# Google (Gemini)
+GOOGLE_API_KEY=...
+GOOGLE_MODEL=gemini-2.0-flash
+
+# Groq (fast inference)
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Ollama (local, no API key required)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+```
+
+::: tip Getting API Keys
+- **OpenAI**: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Anthropic**: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+- **Google**: [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+- **Groq**: [console.groq.com/keys](https://console.groq.com/keys)
+- **Ollama**: Free, local - [ollama.ai](https://ollama.ai/)
+:::
+
 ### CORS
 
 ```bash

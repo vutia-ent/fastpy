@@ -23,8 +23,10 @@ fastpy ai:config --test
 
 | Provider | Model | API Key Variable |
 |----------|-------|------------------|
-| Anthropic | Claude Sonnet | `ANTHROPIC_API_KEY` |
+| Anthropic | Claude Sonnet 4 | `ANTHROPIC_API_KEY` |
 | OpenAI | GPT-4o | `OPENAI_API_KEY` |
+| Google | Gemini 2.0 Flash | `GOOGLE_API_KEY` |
+| Groq | Llama 3.3 70B | `GROQ_API_KEY` |
 | Ollama | Llama 3.2 (local) | None required |
 
 ### Quick Setup
@@ -41,8 +43,10 @@ fastpy ai:config --test
 ```
 
 ::: tip Getting API Keys
-- **Anthropic (Claude)**: [console.anthropic.com](https://console.anthropic.com/)
+- **Anthropic (Claude)**: [console.anthropic.com](https://console.anthropic.com/settings/keys)
 - **OpenAI (GPT-4)**: [platform.openai.com](https://platform.openai.com/api-keys)
+- **Google (Gemini)**: [aistudio.google.com](https://aistudio.google.com/apikey)
+- **Groq**: [console.groq.com](https://console.groq.com/keys)
 - **Ollama**: Free, runs locally - [ollama.ai](https://ollama.ai/)
 :::
 
@@ -101,7 +105,7 @@ AI Configuration
   Provider: anthropic
   ANTHROPIC_API_KEY: Set
 
-Set provider with: export FASTPY_AI_PROVIDER=anthropic|openai|ollama
+Set provider with: export FASTPY_AI_PROVIDER=anthropic|openai|google|groq|ollama
 ```
 
 ### Using Ollama (Free, Local)
@@ -126,6 +130,36 @@ Configure Ollama:
 ```bash
 export OLLAMA_MODEL=llama3.2      # Model to use
 export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
+```
+
+### Using Google Gemini
+
+```bash
+# Set provider and API key
+export FASTPY_AI_PROVIDER=google
+export GOOGLE_API_KEY=your-api-key
+
+# Optional: customize model
+export GOOGLE_MODEL=gemini-2.0-flash
+
+# Use it
+fastpy ai "Create a user management system"
+```
+
+### Using Groq (Fast Inference)
+
+Groq offers extremely fast inference with open-source models:
+
+```bash
+# Set provider and API key
+export FASTPY_AI_PROVIDER=groq
+export GROQ_API_KEY=your-api-key
+
+# Optional: customize model
+export GROQ_MODEL=llama-3.3-70b-versatile
+
+# Use it
+fastpy ai "Create a product catalog"
 ```
 
 ---
