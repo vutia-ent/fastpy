@@ -52,8 +52,8 @@ source ~/.zshrc  # or ~/.bashrc
 ```
 
 This adds a shell function that automatically:
-- Changes into the project directory after `fastpy new --install`
-- Activates the virtual environment after `fastpy install`
+- Changes into the project directory after `fastpy new`
+- Activates the virtual environment after project creation or `fastpy install`
 
 ## Create a New Project
 
@@ -62,7 +62,7 @@ This adds a shell function that automatically:
 Create a fully configured project with one command:
 
 ```bash
-fastpy new my-api --install
+fastpy new my-api
 ```
 
 This will:
@@ -104,8 +104,11 @@ fastpy serve
 ### CLI Options
 
 ```bash
-# Create with automatic setup (recommended)
-fastpy new my-api --install
+# Create with automatic setup (default, recommended)
+fastpy new my-api
+
+# Skip automatic setup (manual installation)
+fastpy new my-api --no-install
 
 # Create without initializing git
 fastpy new my-api --no-git

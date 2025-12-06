@@ -11,8 +11,8 @@ Setup commands help initialize and configure a new Fastpy project.
 fastpy shell:install
 source ~/.zshrc  # or ~/.bashrc
 
-# Create project with automatic setup
-fastpy new my-api --install
+# Create project with automatic setup (venv, deps, config)
+fastpy new my-api
 # That's it! With shell integration, you're already in the project with venv activated
 
 # Start the server
@@ -22,17 +22,19 @@ fastpy serve
 Without shell integration:
 
 ```bash
-fastpy new my-api --install
+fastpy new my-api
 cd my-api
 source venv/bin/activate  # Windows: venv\Scripts\activate
 fastpy serve
 ```
 
-### Step-by-Step Setup
+### Manual Setup (Advanced)
+
+Use `--no-install` to skip automatic setup and configure manually:
 
 ```bash
-# Create project
-fastpy new my-api
+# Create project without automatic setup
+fastpy new my-api --no-install
 cd my-api
 
 # Install dependencies (creates venv + installs packages + runs setup)
@@ -52,8 +54,8 @@ fastpy shell:install
 ```
 
 This adds a shell function to your `~/.zshrc` or `~/.bashrc` that:
-- Auto-cd into project after `fastpy new --install`
-- Auto-activate venv after `fastpy install`
+- Auto-cd into project after `fastpy new`
+- Auto-activate venv after project creation or `fastpy install`
 
 After installation, restart your terminal or run:
 
@@ -388,22 +390,21 @@ fastpy db:setup --no-auto-generate
 ### New Project Setup (Recommended)
 
 ```bash
-# One-command project creation
-fastpy new my-api --install
+# One-command project creation (full setup is default)
+fastpy new my-api
 cd my-api
 source venv/bin/activate
-fastpy setup
 fastpy serve
 ```
 
-### New Project Setup (Step-by-Step)
+### New Project Setup (Manual)
 
 ```bash
-# 1. Create project
-fastpy new my-api
+# 1. Create project without auto-setup
+fastpy new my-api --no-install
 cd my-api
 
-# 2. Install dependencies
+# 2. Install dependencies manually
 fastpy install
 
 # 3. Activate and run
