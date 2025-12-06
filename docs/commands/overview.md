@@ -57,8 +57,9 @@ These commands work anywhere (not just inside a Fastpy project):
 | Command | Description |
 |---------|-------------|
 | `new` | Create a new Fastpy project |
-| `new --install` | Create project + auto-setup venv and deps |
-| `install` | Install deps and setup (run inside project) |
+| `new --install` | Create project + auto-setup everything |
+| `install` | Install deps and run setup wizard |
+| `shell:install` | Add shell integration for auto-cd/activate |
 | `ai` | AI-powered code generation from natural language |
 | `config` | Manage CLI configuration |
 | `init` | Initialize Fastpy configuration |

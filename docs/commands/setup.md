@@ -7,11 +7,24 @@ Setup commands help initialize and configure a new Fastpy project.
 ### One-Command Setup (Recommended)
 
 ```bash
+# Install shell integration (one-time setup)
+fastpy shell:install
+source ~/.zshrc  # or ~/.bashrc
+
 # Create project with automatic setup
 fastpy new my-api --install
+# That's it! With shell integration, you're already in the project with venv activated
+
+# Start the server
+fastpy serve
+```
+
+Without shell integration:
+
+```bash
+fastpy new my-api --install
 cd my-api
-source venv/bin/activate
-fastpy setup
+source venv/bin/activate  # Windows: venv\Scripts\activate
 fastpy serve
 ```
 
@@ -22,12 +35,30 @@ fastpy serve
 fastpy new my-api
 cd my-api
 
-# Install dependencies (creates venv + installs packages)
+# Install dependencies (creates venv + installs packages + runs setup)
 fastpy install
 
-# Activate and configure
+# Activate and run
 source venv/bin/activate
-fastpy setup
+fastpy serve
+```
+
+## fastpy shell:install
+
+Install shell integration for automatic directory changing and venv activation.
+
+```bash
+fastpy shell:install
+```
+
+This adds a shell function to your `~/.zshrc` or `~/.bashrc` that:
+- Auto-cd into project after `fastpy new --install`
+- Auto-activate venv after `fastpy install`
+
+After installation, restart your terminal or run:
+
+```bash
+source ~/.zshrc  # or ~/.bashrc
 ```
 
 ## fastpy install

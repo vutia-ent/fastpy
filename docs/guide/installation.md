@@ -42,11 +42,24 @@ Verify installation:
 fastpy version
 ```
 
+## Shell Integration (Recommended)
+
+Enable auto-cd and auto-activate for the best experience:
+
+```bash
+fastpy shell:install
+source ~/.zshrc  # or ~/.bashrc
+```
+
+This adds a shell function that automatically:
+- Changes into the project directory after `fastpy new --install`
+- Activates the virtual environment after `fastpy install`
+
 ## Create a New Project
 
 ### One-Command Setup (Recommended)
 
-Create a project with automatic environment setup:
+Create a fully configured project with one command:
 
 ```bash
 fastpy new my-api --install
@@ -55,15 +68,15 @@ fastpy new my-api --install
 This will:
 - Clone the Fastpy template
 - Create a virtual environment
-- Install all dependencies
+- Install all dependencies (auto-installs MySQL client on macOS if needed)
+- Run the setup wizard (database, secrets, migrations)
 - Display next steps
 
-Then:
+If you installed shell integration, you'll be automatically placed in the project with venv activated. Otherwise:
 
 ```bash
 cd my-api
 source venv/bin/activate  # Windows: venv\Scripts\activate
-fastpy setup              # Configure database, secrets, etc.
 fastpy serve              # Start development server
 ```
 
@@ -78,14 +91,11 @@ If you prefer more control:
 fastpy new my-api
 cd my-api
 
-# Install dependencies (creates venv + installs packages)
+# Install dependencies (creates venv + installs packages + runs setup)
 fastpy install
 
 # Activate virtual environment
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Run interactive setup
-fastpy setup
 
 # Start server
 fastpy serve
@@ -94,7 +104,7 @@ fastpy serve
 ### CLI Options
 
 ```bash
-# Create with automatic setup
+# Create with automatic setup (recommended)
 fastpy new my-api --install
 
 # Create without initializing git
@@ -105,6 +115,9 @@ fastpy new my-api --branch dev
 
 # Install dependencies only (skip setup wizard)
 fastpy install --skip-setup
+
+# Skip MySQL packages (for SQLite/PostgreSQL only projects)
+fastpy install --skip-mysql
 
 # Use different requirements file
 fastpy install -r requirements-dev.txt
@@ -263,6 +276,8 @@ source ~/.bashrc
 
 ### MySQL Client Issues (macOS)
 
+Fastpy automatically offers to install MySQL client on macOS when needed. If you prefer to install manually:
+
 ```bash
 brew install mysql-client
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
@@ -270,11 +285,34 @@ export LDFLAGS="-L/opt/homebrew/opt/mysql-client/lib"
 export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
 ```
 
+Or skip MySQL packages entirely if you're using SQLite or PostgreSQL:
+
+```bash
+fastpy install --skip-mysql
+```
+
 ### bcrypt Issues
 
 ```bash
 pip install bcrypt==4.2.1 --no-binary bcrypt
 ```
+
+## Diagnostics
+
+Use `fastpy doctor` to diagnose issues:
+
+```bash
+fastpy doctor
+```
+
+This checks:
+- Python version
+- Git installation
+- Virtual environment status
+- Dependencies (uvicorn, alembic, fastapi, sqlmodel)
+- Environment configuration (.env, DATABASE_URL, SECRET_KEY)
+- AI provider configuration
+- Migration status
 
 ## Verify Installation
 
