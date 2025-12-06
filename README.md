@@ -262,15 +262,17 @@ fastpy make:resource Profile \
 
 All API responses follow a consistent format:
 
+**Success:**
 ```json
-// Success
 {
   "success": true,
   "data": { ... },
   "message": "Operation successful"
 }
+```
 
-// Error
+**Error:**
+```json
 {
   "success": false,
   "error": {
@@ -278,8 +280,10 @@ All API responses follow a consistent format:
     "code": "NOT_FOUND"
   }
 }
+```
 
-// Paginated
+**Paginated:**
+```json
 {
   "success": true,
   "data": [ ... ],
