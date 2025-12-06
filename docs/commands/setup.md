@@ -44,6 +44,7 @@ fastpy install
 |--------|-------------|
 | `--skip-setup` | Skip running the interactive setup wizard |
 | `--skip-venv` | Skip virtual environment creation |
+| `--skip-mysql` | Skip MySQL packages (for SQLite/PostgreSQL users) |
 | `-r, --requirements` | Requirements file to install (default: requirements.txt) |
 
 ### Examples
@@ -55,11 +56,45 @@ fastpy install
 # Install dependencies only (skip setup)
 fastpy install --skip-setup
 
+# Skip MySQL packages (recommended for SQLite/PostgreSQL users)
+fastpy install --skip-mysql
+
 # Use different requirements file
 fastpy install -r requirements-dev.txt
 
 # Skip venv creation (use existing environment)
 fastpy install --skip-venv
+```
+
+### MySQL Installation Issues
+
+On some systems (especially macOS), MySQL client installation may fail if MySQL development libraries are not installed. You have two options:
+
+**Option 1: Install MySQL development libraries**
+
+::: code-group
+
+```bash [macOS]
+brew install mysql-client
+export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+export LDFLAGS="-L/opt/homebrew/opt/mysql-client/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/mysql-client/include"
+```
+
+```bash [Ubuntu/Debian]
+sudo apt-get install libmysqlclient-dev python3-dev
+```
+
+```bash [RHEL/CentOS]
+sudo yum install mysql-devel python3-devel
+```
+
+:::
+
+**Option 2: Skip MySQL packages (if using SQLite or PostgreSQL)**
+
+```bash
+fastpy install --skip-mysql
 ```
 
 ### What It Does
