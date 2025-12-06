@@ -1,13 +1,14 @@
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, status, Body
+from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.database.connection import get_session
 from app.controllers.auth_controller import AuthController
-from app.models.user import UserCreate, UserRead, User, PasswordChange
+from app.models.user import UserCreate, UserRead, User, PasswordChange, validate_password_strength
 from app.utils.auth import get_current_active_user
+from app.utils.logger import logger
 
 router = APIRouter()
 
@@ -26,13 +27,30 @@ class ResetPasswordRequest(BaseModel):
     """Request body for password reset"""
     token: str
     email: EmailStr
-    new_password: str
+    new_password: str = Field(min_length=8, max_length=255)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Validate new password strength"""
+        return validate_password_strength(v)
 
 
 class LoginRequest(BaseModel):
     """Request body for JSON login"""
     email: EmailStr
     password: str
+
+
+class VerifyEmailRequest(BaseModel):
+    """Request body for email verification with token"""
+    token: str
+    email: EmailStr
+
+
+class SendVerificationRequest(BaseModel):
+    """Request body for sending verification email"""
+    email: EmailStr
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -125,7 +143,7 @@ async def forgot_password(
 ) -> Dict[str, str]:
     """
     Request password reset.
-    In production, this would send an email with reset link.
+    Generates a reset token (in production, send via email).
 
     Note: Always returns success to prevent email enumeration.
     """
@@ -133,11 +151,18 @@ async def forgot_password(
     user = await AuthController.get_user_by_email(session, request.email)
 
     if user:
-        # In production: generate token and send email
-        # token = AuthController.generate_password_reset_token()
-        # Store token in cache/db with expiration
-        # Send email with reset link
-        pass
+        # Generate password reset token
+        token = AuthController.create_password_reset_token(request.email)
+
+        # In production: send this token via email
+        # For now, log it (remove in production!)
+        logger.info(
+            f"Password reset token generated for {request.email}",
+            extra={"token": token, "note": "In production, send via email"}
+        )
+
+        # TODO: Integrate with email service
+        # await send_password_reset_email(user.email, token)
 
     # Always return success to prevent email enumeration
     return {
@@ -153,37 +178,69 @@ async def reset_password(
     """
     Reset password using token from email.
 
-    Note: In production, validate the token from cache/db.
+    - **token**: The reset token received via email
+    - **email**: The email address associated with the account
+    - **new_password**: The new password (min 8 chars, must contain letter and digit)
     """
-    # In production:
-    # 1. Validate token from cache/db
-    # 2. Check token expiration
-    # 3. Get user from token
-    # 4. Reset password
-    # 5. Invalidate token
-
-    user = await AuthController.get_user_by_email(session, request.email)
-    if not user:
-        # Don't reveal if user exists
-        return {"message": "Password reset successful"}
-
-    # For demo purposes - in production, validate token first
-    # await AuthController.reset_password(session, user, request.new_password)
+    # Validate token and reset password
+    await AuthController.validate_and_reset_password(
+        session,
+        request.token,
+        request.email,
+        request.new_password
+    )
 
     return {"message": "Password reset successful"}
 
 
-@router.post("/verify-email")
-async def verify_email(
-    current_user: User = Depends(get_current_active_user),
+@router.post("/send-verification")
+async def send_verification_email(
+    request: SendVerificationRequest,
     session: AsyncSession = Depends(get_session),
 ) -> Dict[str, str]:
     """
-    Verify email for current user.
+    Send email verification link.
+    Generates a verification token (in production, send via email).
 
-    Note: In production, this would validate a token from email.
+    Note: Always returns success to prevent email enumeration.
     """
-    await AuthController.verify_email(session, current_user.id)
+    user = await AuthController.get_user_by_email(session, request.email)
+
+    if user and not user.email_verified_at:
+        # Generate verification token
+        token = AuthController.create_email_verification_token(request.email)
+
+        # In production: send this token via email
+        logger.info(
+            f"Email verification token generated for {request.email}",
+            extra={"token": token, "note": "In production, send via email"}
+        )
+
+        # TODO: Integrate with email service
+        # await send_verification_email(user.email, token)
+
+    return {
+        "message": "If an unverified account exists with this email, you will receive a verification link."
+    }
+
+
+@router.post("/verify-email")
+async def verify_email(
+    request: VerifyEmailRequest,
+    session: AsyncSession = Depends(get_session),
+) -> Dict[str, str]:
+    """
+    Verify email using token from email.
+
+    - **token**: The verification token received via email
+    - **email**: The email address to verify
+    """
+    await AuthController.verify_email_with_token(
+        session,
+        request.token,
+        request.email
+    )
+
     return {"message": "Email verified successfully"}
 
 
@@ -193,9 +250,10 @@ async def logout(current_user: User = Depends(get_current_active_user)) -> Dict[
     Logout current user.
 
     Note: With JWT, actual invalidation requires token blacklisting.
-    Client should discard the tokens.
+    Client should discard the tokens. For enhanced security,
+    implement Redis-based token blacklisting.
     """
-    # In production with refresh tokens:
-    # - Add refresh token to blacklist
+    # TODO: For production with enhanced security:
+    # - Add refresh token to blacklist (requires Redis)
     # - Optionally add access token to blacklist
     return {"message": "Logged out successfully"}

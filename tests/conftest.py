@@ -1,8 +1,7 @@
 """
 Pytest configuration and fixtures.
 """
-import asyncio
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 from datetime import datetime, timezone
 
 import pytest
@@ -17,8 +16,14 @@ from app.models.user import User
 from app.utils.auth import get_password_hash, create_access_token
 
 
-# Test database URL - use SQLite for tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+# Test constants
+TEST_PASSWORD = "password123"
+TEST_USER_EMAIL = "test@example.com"
+TEST_USER_NAME = "Test User"
+
+# Test database URL - use in-memory SQLite for tests
+# This ensures tests don't persist data between runs
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 # Create test engine
 test_engine = create_async_engine(
@@ -35,14 +40,6 @@ TestSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False
 )
-
-
-@pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -79,12 +76,12 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
 @pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession) -> User:
-    """Create a test user."""
+    """Create a verified test user."""
     user = User(
-        name="Test User",
-        email="test@example.com",
-        password=get_password_hash("password123"),
-        email_verified_at=datetime.now(timezone.utc)
+        name=TEST_USER_NAME,
+        email=TEST_USER_EMAIL,
+        password=get_password_hash(TEST_PASSWORD),
+        email_verified_at=datetime.now(timezone.utc).isoformat()
     )
     db_session.add(user)
     await db_session.commit()
@@ -98,7 +95,7 @@ async def test_user_unverified(db_session: AsyncSession) -> User:
     user = User(
         name="Unverified User",
         email="unverified@example.com",
-        password=get_password_hash("password123")
+        password=get_password_hash(TEST_PASSWORD)
     )
     db_session.add(user)
     await db_session.commit()
@@ -121,7 +118,7 @@ async def multiple_users(db_session: AsyncSession) -> list[User]:
         user = User(
             name=f"User {i}",
             email=f"user{i}@example.com",
-            password=get_password_hash("password123")
+            password=get_password_hash(TEST_PASSWORD)
         )
         db_session.add(user)
         users.append(user)

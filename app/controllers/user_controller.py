@@ -1,11 +1,11 @@
 from typing import List, Optional
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
 
 from app.models.user import User, UserCreate, UserUpdate
 from app.utils.auth import get_password_hash
 from app.utils.pagination import paginate, PaginatedResult
+from app.utils.exceptions import NotFoundException, ConflictException
 
 
 class UserController:
@@ -44,7 +44,7 @@ class UserController:
         result = await session.execute(query)
         user = result.scalar_one_or_none()
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise NotFoundException(resource="User")
         return user
 
     @staticmethod
@@ -56,24 +56,13 @@ class UserController:
 
     @staticmethod
     async def create(session: AsyncSession, user_data: UserCreate) -> User:
-        """Create a new user"""
-        # Check if email already exists
-        query = select(User).where(User.email == user_data.email)
-        result = await session.execute(query)
-        existing_user = result.scalar_one_or_none()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
-
-        # Create user with hashed password
-        user = User(
-            name=user_data.name,
-            email=user_data.email,
-            password=get_password_hash(user_data.password),
-        )
-        session.add(user)
-        await session.flush()
-        await session.refresh(user)
-        return user
+        """
+        Create a new user.
+        Uses AuthController.register() to avoid duplicate email check logic.
+        """
+        # Import here to avoid circular imports
+        from app.controllers.auth_controller import AuthController
+        return await AuthController.register(session, user_data)
 
     @staticmethod
     async def update(session: AsyncSession, user_id: int, user_data: UserUpdate) -> User:
@@ -84,11 +73,11 @@ class UserController:
         if user_data.name is not None:
             user.name = user_data.name
         if user_data.email is not None:
-            # Check if new email is already taken
+            # Check if new email is already taken by another user
             query = select(User).where(User.email == user_data.email, User.id != user_id)
             result = await session.execute(query)
             if result.scalar_one_or_none():
-                raise HTTPException(status_code=400, detail="Email already taken")
+                raise ConflictException(message="Email already taken")
             user.email = user_data.email
         if user_data.password is not None:
             user.password = get_password_hash(user_data.password)
@@ -111,11 +100,12 @@ class UserController:
     @staticmethod
     async def restore(session: AsyncSession, user_id: int) -> User:
         """Restore a soft deleted user"""
+        # For restore, we need to find the user even if soft-deleted
         query = select(User).where(User.id == user_id)
         result = await session.execute(query)
         user = result.scalar_one_or_none()
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise NotFoundException(resource="User")
 
         user.restore()
         session.add(user)

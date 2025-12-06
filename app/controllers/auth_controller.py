@@ -13,6 +13,13 @@ from app.utils.auth import (
     decode_token,
     generate_token
 )
+from app.utils.token_store import token_store
+from app.utils.exceptions import (
+    NotFoundException,
+    BadRequestException,
+    UnauthorizedException,
+    ConflictException,
+)
 from app.config.settings import settings
 
 
@@ -28,7 +35,7 @@ class AuthController:
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise ConflictException(message="Email already registered")
 
         # Create user with hashed password
         hashed_password = get_password_hash(user_data.password)
@@ -50,19 +57,8 @@ class AuthController:
         result = await session.execute(query)
         user = result.scalar_one_or_none()
 
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        if not verify_password(password, user.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        if not user or not verify_password(password, user.password):
+            raise UnauthorizedException(message="Incorrect email or password")
 
         return user
 
@@ -108,26 +104,14 @@ class AuthController:
         payload = decode_token(refresh_token)
 
         if not payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise UnauthorizedException(message="Invalid refresh token")
 
         if payload.get("type") != "refresh":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise UnauthorizedException(message="Invalid token type")
 
         email = payload.get("sub")
         if not email:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise UnauthorizedException(message="Invalid token payload")
 
         # Get user
         query = select(User).where(User.email == email, User.deleted_at.is_(None))
@@ -135,11 +119,7 @@ class AuthController:
         user = result.scalar_one_or_none()
 
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise UnauthorizedException(message="User not found")
 
         # Create new tokens
         return AuthController.create_tokens(user)
@@ -152,14 +132,14 @@ class AuthController:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def verify_email(session: AsyncSession, user_id: int) -> User:
-        """Mark user's email as verified"""
+    async def verify_email_by_user_id(session: AsyncSession, user_id: int) -> User:
+        """Mark user's email as verified by user ID"""
         query = select(User).where(User.id == user_id)
         result = await session.execute(query)
         user = result.scalar_one_or_none()
 
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise NotFoundException(resource="User")
 
         user.email_verified_at = datetime.now(timezone.utc).isoformat()
         session.add(user)
@@ -176,10 +156,7 @@ class AuthController:
     ) -> User:
         """Change user's password"""
         if not verify_password(current_password, user.password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
-            )
+            raise BadRequestException(message="Current password is incorrect")
 
         user.password = get_password_hash(new_password)
         user.touch()
@@ -190,7 +167,7 @@ class AuthController:
 
     @staticmethod
     def generate_password_reset_token() -> str:
-        """Generate a password reset token"""
+        """Generate a password reset token (deprecated - use create_password_reset_token)"""
         return generate_token(32)
 
     @staticmethod
@@ -206,4 +183,91 @@ class AuthController:
         session.add(user)
         await session.flush()
         await session.refresh(user)
+        return user
+
+    # ==========================================================================
+    # TOKEN-BASED PASSWORD RESET METHODS
+    # ==========================================================================
+
+    @staticmethod
+    def create_password_reset_token(email: str) -> str:
+        """
+        Create a password reset token for the given email.
+        Returns the token to be sent to the user (e.g., via email).
+        """
+        return token_store.create_password_reset_token(email)
+
+    @staticmethod
+    async def validate_and_reset_password(
+        session: AsyncSession,
+        token: str,
+        email: str,
+        new_password: str
+    ) -> bool:
+        """
+        Validate password reset token and reset the password.
+        Returns True if successful, raises exception otherwise.
+        """
+        # Validate token
+        if not token_store.validate_password_reset_token(token, email):
+            raise BadRequestException(message="Invalid or expired reset token")
+
+        # Get user
+        user = await AuthController.get_user_by_email(session, email)
+        if not user:
+            # Token was valid but user doesn't exist - consume token anyway
+            token_store.consume_token(token)
+            raise BadRequestException(message="Invalid or expired reset token")
+
+        # Reset password
+        await AuthController.reset_password(session, user, new_password)
+
+        # Consume token (one-time use)
+        token_store.consume_token(token)
+
+        return True
+
+    # ==========================================================================
+    # TOKEN-BASED EMAIL VERIFICATION METHODS
+    # ==========================================================================
+
+    @staticmethod
+    def create_email_verification_token(email: str) -> str:
+        """
+        Create an email verification token for the given email.
+        Returns the token to be sent to the user (e.g., via email).
+        """
+        return token_store.create_email_verification_token(email)
+
+    @staticmethod
+    async def verify_email_with_token(
+        session: AsyncSession,
+        token: str,
+        email: str
+    ) -> User:
+        """
+        Verify email using a verification token.
+        Returns the verified user.
+        """
+        # Validate token
+        if not token_store.validate_email_verification_token(token, email):
+            raise BadRequestException(message="Invalid or expired verification token")
+
+        # Get user
+        user = await AuthController.get_user_by_email(session, email)
+        if not user:
+            # Token was valid but user doesn't exist - consume token anyway
+            token_store.consume_token(token)
+            raise NotFoundException(resource="User")
+
+        # Mark email as verified
+        user.email_verified_at = datetime.now(timezone.utc).isoformat()
+        user.touch()
+        session.add(user)
+        await session.flush()
+        await session.refresh(user)
+
+        # Consume token (one-time use)
+        token_store.consume_token(token)
+
         return user

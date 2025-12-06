@@ -1,10 +1,15 @@
 """
 Rate limiting middleware using in-memory storage.
 For production, consider using Redis-based rate limiting.
+
+IMPORTANT: This middleware uses in-memory storage which does NOT work in
+distributed/multi-instance deployments. Each instance will have its own
+rate limit counters. For production with multiple instances, use Redis-based
+rate limiting instead.
 """
 import time
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response, JSONResponse
@@ -18,12 +23,44 @@ MAX_CLIENTS = 10000
 CLEANUP_THRESHOLD = 5000
 
 
+def get_client_ip(request: Request, trusted_proxies: Optional[List[str]] = None) -> str:
+    """
+    Get the real client IP address, accounting for proxies.
+
+    Security: Only trust X-Forwarded-For header when the direct client
+    is in the trusted_proxies list. This prevents IP spoofing attacks.
+
+    Args:
+        request: The incoming request
+        trusted_proxies: List of trusted proxy IPs. If None or empty,
+                        X-Forwarded-For header will be ignored.
+
+    Returns:
+        The client IP address
+    """
+    # Get the direct client IP
+    direct_ip = request.client.host if request.client else "unknown"
+
+    # Only trust X-Forwarded-For if the direct client is a trusted proxy
+    if trusted_proxies and direct_ip in trusted_proxies:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            # X-Forwarded-For format: client, proxy1, proxy2, ...
+            # The first IP is the original client
+            client_ip = forwarded.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+
+    return direct_ip
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Simple in-memory rate limiter.
     Uses a sliding window algorithm.
 
     Note: For distributed systems, use Redis-based rate limiting.
+    This implementation is for single-instance deployments only.
     """
 
     def __init__(self, app, requests: int = 100, window: int = 60):
@@ -33,19 +70,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Store: {client_id: [(timestamp, count), ...]}
         self.clients: Dict[str, list] = defaultdict(list)
         self._last_cleanup = time.time()
+        # Cache trusted proxies list
+        self._trusted_proxies = settings.get_trusted_proxies()
 
     def _get_client_id(self, request: Request) -> str:
-        """Get unique client identifier"""
-        # Use X-Forwarded-For for proxied requests
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-
-        # Fall back to client host
-        if request.client:
-            return request.client.host
-
-        return "unknown"
+        """Get unique client identifier with proxy awareness"""
+        return get_client_ip(request, self._trusted_proxies)
 
     def _clean_old_requests(self, client_id: str, current_time: float) -> None:
         """Remove requests outside the current window"""
@@ -153,20 +183,20 @@ class RateLimiter:
         @limiter.limit
         async def expensive_endpoint():
             ...
+
+    Note: This uses in-memory storage and is not suitable for
+    distributed deployments. Use Redis-based rate limiting for production.
     """
 
     def __init__(self, requests: int = 10, window: int = 60):
         self.requests = requests
         self.window = window
         self.clients: Dict[str, list] = defaultdict(list)
+        self._trusted_proxies = settings.get_trusted_proxies()
 
     def _get_client_id(self, request: Request) -> str:
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        if request.client:
-            return request.client.host
-        return "unknown"
+        """Get unique client identifier with proxy awareness"""
+        return get_client_ip(request, self._trusted_proxies)
 
     def _check_limit(self, client_id: str) -> Tuple[bool, int]:
         """Check if client is within rate limit. Returns (allowed, remaining)"""
