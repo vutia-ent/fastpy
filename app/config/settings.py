@@ -81,8 +81,12 @@ class Settings(BaseSettings):
     groq_api_key: Optional[str] = None
     groq_model: str = "llama-3.3-70b-versatile"
 
+    # Ollama - https://ollama.ai (local, no API key required)
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.2"
+
     # Default AI provider
-    ai_provider: Literal["openai", "anthropic", "google", "groq"] = "openai"
+    ai_provider: Literal["openai", "anthropic", "google", "groq", "ollama"] = "openai"
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 
