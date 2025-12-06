@@ -26,7 +26,11 @@ def to_snake_case(name: str) -> str:
 
 
 def to_pascal_case(name: str) -> str:
-    """Convert snake_case to PascalCase"""
+    """Convert snake_case or camelCase to PascalCase, preserving existing capitalization"""
+    # If already PascalCase (starts with uppercase, contains uppercase), return as-is
+    if name[0].isupper() and any(c.isupper() for c in name[1:]):
+        return name
+    # Convert snake_case to PascalCase
     return "".join(word.capitalize() for word in name.split("_"))
 
 
@@ -366,11 +370,27 @@ def make_model(
 '''
         imports.append(concerns_import)
 
-    # Generate model fields
-    model_fields = "\n".join([f.get_model_field() for f in field_defs])
-    create_fields = "\n".join([f.get_create_field() for f in field_defs])
-    read_fields = "\n".join([f.get_read_field() for f in field_defs])
-    update_fields = "\n".join([f.get_update_field() for f in field_defs])
+    # Check if user defined an id field with UUID type
+    has_uuid_id = any(f.name == "id" and f.field_type == "uuid" for f in field_defs)
+
+    # Filter out user-defined id field if it exists (we'll handle it separately)
+    non_id_fields = [f for f in field_defs if f.name != "id"]
+
+    # Generate model fields (excluding id if UUID)
+    model_fields = "\n".join([f.get_model_field() for f in non_id_fields])
+
+    # For create/read/update, also filter id field since it's auto-generated
+    create_fields = "\n".join([f.get_create_field() for f in non_id_fields])
+    read_fields = "\n".join([f.get_read_field() for f in non_id_fields])
+    update_fields = "\n".join([f.get_update_field() for f in non_id_fields])
+
+    # Determine the id field definition
+    if has_uuid_id:
+        id_field = "id: UUID = Field(default_factory=uuid4, primary_key=True)"
+        id_read_type = "id: UUID"
+    else:
+        id_field = "id: Optional[int] = Field(default=None, primary_key=True)"
+        id_read_type = "id: int"
 
     model_template = f'''{chr(10).join(imports)}
 
@@ -386,7 +406,7 @@ class {model_name}(BaseModel{concerns_mixin}, table=True):
 
     __tablename__ = "{table_name}"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    {id_field}
 {model_fields}
     # Timestamps (always last)
     created_at: datetime = Field(default_factory=utc_now, nullable=False)
@@ -406,7 +426,7 @@ class {model_name}Create(BaseModel):
 class {model_name}Read(BaseModel):
     """Schema for reading a {model_name}"""
 
-    id: int
+    {id_read_type}
 {read_fields}
     created_at: datetime
     updated_at: datetime
