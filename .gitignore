@@ -64,3 +64,7 @@ dmypy.json
 .github/copilot-instructions.md
 .gemini/
 .cursorrules
+
+# Dev-only folders (exist only in dev branch)
+docs/
+fastpy-cli/
