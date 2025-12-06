@@ -27,12 +27,12 @@ async def test_soft_deleted_user_not_in_list(
     await client.delete(f"/api/users/{test_user.id}", headers=auth_headers)
 
     # Get all users - should be empty
-    response = await client.get("/api/users", headers=auth_headers)
+    response = await client.get("/api/users/", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
 
-    # The deleted user should not appear in results
-    user_ids = [u["id"] for u in data["items"]]
+    # The deleted user should not appear in results (response is a list)
+    user_ids = [u["id"] for u in data]
     assert test_user.id not in user_ids
 
 
@@ -77,11 +77,12 @@ async def test_restored_user_appears_in_list(
     await client.patch(f"/api/users/{test_user.id}/restore", headers=auth_headers)
 
     # Get all users - should include restored user
-    response = await client.get("/api/users", headers=auth_headers)
+    response = await client.get("/api/users/", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
 
-    user_ids = [u["id"] for u in data["items"]]
+    # Response is a list
+    user_ids = [u["id"] for u in data]
     assert test_user.id in user_ids
 
 

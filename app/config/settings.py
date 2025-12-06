@@ -1,7 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal, List, Optional
-import os
 import secrets as secrets_module
+
+# Cached development secret key (generated once at startup)
+_cached_dev_secret_key: Optional[str] = None
 
 
 class Settings(BaseSettings):
@@ -132,6 +134,8 @@ class Settings(BaseSettings):
         Get the secret key, generating a random one for development if not set.
         Raises an error in production if SECRET_KEY is not explicitly set.
         """
+        global _cached_dev_secret_key
+
         if self.secret_key:
             return self.secret_key
         if self.is_production:
@@ -139,8 +143,10 @@ class Settings(BaseSettings):
                 "SECRET_KEY must be set in production environment. "
                 "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
             )
-        # Generate a random key for development (will change on restart)
-        return secrets_module.token_urlsafe(32)
+        # Generate and cache a random key for development (persists until restart)
+        if _cached_dev_secret_key is None:
+            _cached_dev_secret_key = secrets_module.token_urlsafe(32)
+        return _cached_dev_secret_key
 
     @property
     def is_production(self) -> bool:
