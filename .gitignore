@@ -68,3 +68,4 @@ dmypy.json
 # Dev-only folders (exist only in dev branch)
 docs/
 fastpy-cli/
+.github/workflows/
