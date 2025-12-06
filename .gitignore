@@ -68,7 +68,7 @@ dmypy.json
 # Dev-only files (exist only in dev branch)
 CLAUDE.md
 fastpy-cli/
-.github/workflows/
+# .github/workflows/  # Keep workflows tracked for CI/CD
 docs/.vitepress/.temp/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
