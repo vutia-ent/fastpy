@@ -1,3 +1,6 @@
+# NOTE: Upgrade pip first if you encounter installation issues:
+#   pip install --upgrade pip
+#
 # Core Framework
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
@@ -19,8 +22,8 @@ greenlet==3.2.4  # Required for async SQLAlchemy
 
 
 # PostgreSQL drivers (install if using PostgreSQL)
-psycopg2-binary==2.9.10
-asyncpg==0.30.0
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
 
 # MySQL drivers (install if using MySQL)
 mysqlclient==2.2.6  # For Alembic migrations (provides MySQLdb)

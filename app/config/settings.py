@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     reload: bool = True
 
     # Database
-    db_driver: Literal["postgresql", "mysql"] = "postgresql"
+    db_driver: Literal["postgresql", "mysql", "sqlite"] = "postgresql"
     database_url: str = "postgresql://postgres:password@localhost:5432/fastpy_db"
     db_pool_size: int = 5
     db_max_overflow: int = 10
@@ -72,6 +72,9 @@ class Settings(BaseSettings):
             return self.database_url.replace("postgresql://", "postgresql+asyncpg://")
         elif self.db_driver == "mysql":
             return self.database_url.replace("mysql://", "mysql+aiomysql://")
+        elif self.db_driver == "sqlite":
+            # SQLite async uses aiosqlite
+            return self.database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
         return self.database_url
 
     def get_cors_origins(self) -> List[str]:
