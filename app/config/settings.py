@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal, List
+from typing import Literal, List, Optional
 import os
 
 
@@ -64,7 +64,27 @@ class Settings(BaseSettings):
     default_page_size: int = 20
     max_page_size: int = 100
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
+    # AI Providers (optional)
+    # OpenAI - https://platform.openai.com/api-keys
+    openai_api_key: Optional[str] = None
+    openai_model: str = "gpt-4o"
+
+    # Anthropic - https://console.anthropic.com/settings/keys
+    anthropic_api_key: Optional[str] = None
+    anthropic_model: str = "claude-sonnet-4-20250514"
+
+    # Google AI - https://aistudio.google.com/apikey
+    google_api_key: Optional[str] = None
+    google_model: str = "gemini-2.0-flash"
+
+    # Groq - https://console.groq.com/keys
+    groq_api_key: Optional[str] = None
+    groq_model: str = "llama-3.3-70b-versatile"
+
+    # Default AI provider
+    ai_provider: Literal["openai", "anthropic", "google", "groq"] = "openai"
+
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 
     def get_async_database_url(self) -> str:
         """Convert database URL to async version based on driver"""
