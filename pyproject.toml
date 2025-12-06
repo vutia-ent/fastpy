@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fastcli = "cli:app"
+fastpy = "cli:app"
 
 [project.optional-dependencies]
 dev = [

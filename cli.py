@@ -2146,8 +2146,8 @@ def route_list():
 # AI Configuration Command
 # ============================================
 
-@app.command("init:ai")
-def init_ai(
+@app.command("ai:init")
+def ai_init(
     provider: str = typer.Argument(
         None,
         help="AI provider (claude, copilot, gemini, cursor, or leave empty for interactive)",
@@ -3198,53 +3198,6 @@ fastpy libs queue --usage
     return base_content
 
 
-# ============================================
-# List Command
-# ============================================
-
-@app.command("list")
-def list_commands():
-    """List all available commands with examples"""
-    table = Table(title="FastCLI Commands")
-    table.add_column("Command", style="cyan", width=25)
-    table.add_column("Description", style="green", width=35)
-    table.add_column("Example", style="yellow")
-
-    commands = [
-        ("serve", "Start dev server", "fastcli serve --port 8000"),
-        ("route:list", "List all routes", "fastcli route:list"),
-        ("make:model", "Create model", "fastcli make:model Post -f title:string:required -m"),
-        ("make:controller", "Create controller", "fastcli make:controller Post"),
-        ("make:route", "Create routes", "fastcli make:route Post -p"),
-        ("make:resource", "Create all at once", "fastcli make:resource Post -i -m -p"),
-        ("make:service", "Create service", "fastcli make:service Payment"),
-        ("make:repository", "Create repository", "fastcli make:repository Payment"),
-        ("make:middleware", "Create middleware", "fastcli make:middleware Logging"),
-        ("make:test", "Create test file", "fastcli make:test User"),
-        ("make:factory", "Create test factory", "fastcli make:factory User"),
-        ("make:seeder", "Create seeder", "fastcli make:seeder User"),
-        ("make:enum", "Create enum", "fastcli make:enum Status -v active -v inactive"),
-        ("make:exception", "Create exception", "fastcli make:exception NotFound -s 404"),
-        ("db:migrate", "Run migrations", "fastcli db:migrate -m 'Add posts'"),
-        ("db:make", "Generate migration", "fastcli db:make 'Add slug'"),
-        ("db:rollback", "Rollback migrations", "fastcli db:rollback -s 2"),
-        ("db:fresh", "Fresh database", "fastcli db:fresh"),
-        ("db:seed", "Run seeders", "fastcli db:seed -c 20"),
-        ("init:ai", "AI config file", "fastcli init:ai claude"),
-        ("update", "Update Fastpy files", "fastcli update --cli"),
-        ("list", "List commands", "fastcli list"),
-    ]
-
-    for cmd, desc, example in commands:
-        table.add_row(cmd, desc, example)
-
-    console.print(table)
-
-    console.print("\n[cyan]Field Types:[/cyan]")
-    console.print(f"  {', '.join(FIELD_TYPES.keys())}")
-
-    console.print("\n[cyan]Validation Rules:[/cyan]")
-    console.print("  required, nullable, unique, index, max:N, min:N, gt:N, lt:N, ge:N, le:N, foreign:table.column")
 
 
 # ============================================
@@ -3943,11 +3896,11 @@ def cmd_db_setup(
 # Update List Command with Deploy Commands
 # ============================================
 
-# Override the list command to include deploy commands
-@app.command("list", hidden=True)
+# List Command - All available commands
+@app.command("list")
 def list_all_commands():
     """List all available commands with examples"""
-    table = Table(title="FastCLI Commands")
+    table = Table(title="Fastpy Commands")
     table.add_column("Command", style="cyan", width=25)
     table.add_column("Description", style="green", width=35)
     table.add_column("Example", style="yellow")
@@ -4007,7 +3960,7 @@ def list_all_commands():
         ("setup:hooks", "Install pre-commit", "fastpy setup:hooks"),
         ("make:admin", "Create admin user", "fastpy make:admin"),
         # Other
-        ("init:ai", "AI config file", "fastpy init:ai claude"),
+        ("ai:init", "AI config file", "fastpy ai:init claude"),
         ("update", "Update Fastpy files", "fastpy update --cli"),
     ]
 

@@ -134,19 +134,19 @@ export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
 
 Fastpy also includes configuration generators for popular AI coding assistants. These configuration files help AI assistants understand your project structure, conventions, and available commands.
 
-## Configuration
+### ai:init
 
 Generate AI assistant configurations using the CLI:
 
 ```bash
 # Interactive mode - choose from menu
-fastpy init:ai
+fastpy ai:init
 
 # Direct selection
-fastpy init:ai claude
-fastpy init:ai copilot
-fastpy init:ai cursor
-fastpy init:ai gemini
+fastpy ai:init claude
+fastpy ai:init copilot
+fastpy ai:init cursor
+fastpy ai:init gemini
 ```
 
 ## Supported AI Assistants
@@ -158,7 +158,7 @@ fastpy init:ai gemini
 For use with [Claude Code](https://claude.ai/code) - Anthropic's CLI tool.
 
 ```bash
-fastpy init:ai claude
+fastpy ai:init claude
 ```
 
 ### GitHub Copilot
@@ -168,7 +168,7 @@ fastpy init:ai claude
 For use with GitHub Copilot in VS Code, JetBrains, and other IDEs.
 
 ```bash
-fastpy init:ai copilot
+fastpy ai:init copilot
 ```
 
 ### Cursor AI
@@ -178,7 +178,7 @@ fastpy init:ai copilot
 For use with the [Cursor](https://cursor.sh) AI-powered code editor.
 
 ```bash
-fastpy init:ai cursor
+fastpy ai:init cursor
 ```
 
 ### Google Gemini
@@ -188,7 +188,7 @@ fastpy init:ai cursor
 For use with Google Gemini Code Assist.
 
 ```bash
-fastpy init:ai gemini
+fastpy ai:init gemini
 ```
 
 ## What's Included in the Configuration
