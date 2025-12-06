@@ -33,6 +33,26 @@ brew install fastpy
 fastpy version
 ```
 
+## Troubleshooting: pip Not Recognized
+
+If you get `pip: command not found`, use `pip3` instead:
+
+```bash
+pip3 install fastpy-cli
+```
+
+::: tip Creating a pip alias
+To always use `pip3` when typing `pip`:
+
+**macOS/Linux:**
+```bash
+echo 'alias pip=pip3' >> ~/.zshrc  # or ~/.bashrc for Linux
+source ~/.zshrc
+```
+
+**Windows:** Python 3.x installers usually include both `pip` and `pip3`. If not, reinstall Python and check "Add to PATH".
+:::
+
 ## Troubleshooting: Command Not Found
 
 If you get `fastpy: command not found` after installing with pip, the Python scripts directory isn't in your PATH.
