@@ -12,8 +12,9 @@ from app.utils.logger import logger
 async_database_url = settings.get_async_database_url()
 
 # Engine configuration based on environment
+# Note: echo=False to keep CLI output clean. Enable manually if needed for SQL debugging.
 engine_config = {
-    "echo": settings.debug and settings.is_development,
+    "echo": False,
     "future": True,
 }
 
