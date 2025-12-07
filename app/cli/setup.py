@@ -385,7 +385,7 @@ async def create_admin_user(name: str, email: str, password: str) -> bool:
                 name=name,
                 email=email,
                 password=get_password_hash(password),
-                email_verified_at=datetime.now(timezone.utc).isoformat()
+                email_verified_at=datetime.now(timezone.utc)
             )
             session.add(user)
             await session.commit()

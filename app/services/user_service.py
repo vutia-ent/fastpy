@@ -51,7 +51,7 @@ class UserService(BaseService[User, UserRepository]):
         """Mark user's email as verified"""
         return await self.repository.update(
             user_id,
-            {"email_verified_at": datetime.now(timezone.utc).isoformat()}
+            {"email_verified_at": datetime.now(timezone.utc)}
         )
 
     async def change_password(
