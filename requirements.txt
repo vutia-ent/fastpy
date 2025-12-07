@@ -33,8 +33,7 @@ cryptography==44.0.0  # Required by pymysql
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
-passlib==1.7.4
-bcrypt==4.2.1  # Compatible with passlib 1.7.4
+bcrypt==4.2.1  # Password hashing
 
 # Utilities
 python-dateutil==2.9.0  # Date/time utilities

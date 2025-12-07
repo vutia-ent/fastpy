@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +12,6 @@ from app.config.settings import settings
 from app.database.connection import get_session
 from app.models.user import User
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -22,12 +19,18 @@ oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_e
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8")
+    )
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password"""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(
+        password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
 
 
 def generate_token(length: int = 32) -> str:
