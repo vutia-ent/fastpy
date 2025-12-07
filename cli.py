@@ -873,10 +873,66 @@ def make_resource(
 
     make_route(name, protected=protected, no_binding=no_binding, validation=validation)
 
+    # Prompt to add routes to main.py
+    console.print()
+    snake_name = to_snake_case(name)
+    model_name = to_pascal_case(name)
+    route_prefix = pluralize(snake_name)
+
+    import_line = f"from app.routes.{snake_name}_routes import router as {snake_name}_router"
+    include_line = f'app.include_router({snake_name}_router, prefix="/api/{route_prefix}", tags=["{model_name}s"])'
+
+    if Confirm.ask(f"Add routes to main.py?", default=True):
+        main_path = Path("main.py")
+        if main_path.exists():
+            content = main_path.read_text()
+
+            # Check if already added
+            if f"{snake_name}_router" in content:
+                console.print(f"[yellow]⚠[/yellow] Routes already exist in main.py")
+            else:
+                # Add import after last route import
+                import_marker = "from app.routes."
+                lines = content.split("\n")
+                last_import_idx = 0
+                for i, line in enumerate(lines):
+                    if line.startswith(import_marker):
+                        last_import_idx = i
+
+                lines.insert(last_import_idx + 1, import_line)
+
+                # Add include_router after last include_router
+                content = "\n".join(lines)
+                include_marker = "app.include_router("
+                lines = content.split("\n")
+                last_include_idx = 0
+                for i, line in enumerate(lines):
+                    if include_marker in line:
+                        last_include_idx = i
+
+                lines.insert(last_include_idx + 1, include_line)
+                main_path.write_text("\n".join(lines))
+                console.print(f"[green]✓[/green] Routes added to main.py")
+        else:
+            console.print("[yellow]⚠[/yellow] main.py not found")
+    else:
+        console.print(f"\n[yellow]Add to main.py manually:[/yellow]")
+        console.print(f"  {import_line}")
+        console.print(f"  {include_line}")
+
+    # Prompt to run migration
     if migration:
         table_name = pluralize(to_snake_case(name))
-        console.print("\n[yellow]Run migration:[/yellow]")
-        console.print(f'  fastpy db:migrate -m "Create {table_name} table"')
+        console.print()
+        if Confirm.ask("Run migration now?", default=True):
+            console.print()
+            subprocess.run(
+                ["python", "cli.py", "db:migrate", "-m", f"Create {table_name} table"],
+                check=False
+            )
+        else:
+            console.print(f"\n[yellow]Run migration later:[/yellow]")
+            console.print(f'  fastpy db:migrate -m "Create {table_name} table"')
 
     console.print(f"\n[green]✓ Resource '{name}' created successfully![/green]")
     features = ["Active Record", "Route Model Binding"]
