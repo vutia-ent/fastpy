@@ -25,6 +25,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Permissions-Policy: Restricts browser features
     """
 
+    # Docs endpoints that need relaxed CSP for Swagger UI
+    DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
+
     async def dispatch(self, request: Request, call_next) -> Response:
         """Add security headers to the response."""
         response = await call_next(request)
@@ -32,8 +35,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Prevent MIME type sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
 
-        # Prevent clickjacking
-        response.headers["X-Frame-Options"] = "DENY"
+        # Prevent clickjacking (allow framing for docs in debug mode)
+        if settings.debug and request.url.path in self.DOCS_PATHS:
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        else:
+            response.headers["X-Frame-Options"] = "DENY"
 
         # Enable XSS filter in older browsers
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -41,8 +47,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Control referrer information
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-        # Basic Content Security Policy for API
-        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        # Content Security Policy - relaxed for docs endpoints in debug mode
+        if settings.debug and request.url.path in self.DOCS_PATHS:
+            # Allow Swagger UI CDN assets
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "img-src 'self' data: https://cdn.jsdelivr.net; "
+                "font-src 'self' https://cdn.jsdelivr.net"
+            )
+        else:
+            response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
 
         # Restrict browser features
         response.headers["Permissions-Policy"] = (
