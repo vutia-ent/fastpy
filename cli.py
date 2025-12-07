@@ -3876,6 +3876,7 @@ def cmd_make_admin(
     email: str = typer.Option(None, "--email", "-e", help="Admin email"),
     password: str = typer.Option(None, "--password", "-p", help="Admin password"),
     non_interactive: bool = typer.Option(False, "--yes", "-y", help="Non-interactive mode"),
+    no_header: bool = typer.Option(False, "--no-header", hidden=True, help="Hide header panel"),
 ):
     """
     Create a super admin user.
@@ -3889,6 +3890,7 @@ def cmd_make_admin(
     # Suppress SQLAlchemy SQL logging during admin creation
     import logging
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
 
     from app.cli.setup import setup_admin
     setup_admin(
@@ -3896,6 +3898,7 @@ def cmd_make_admin(
         email=email,
         password=password,
         interactive=not non_interactive,
+        show_header=not no_header,
     )
 
 

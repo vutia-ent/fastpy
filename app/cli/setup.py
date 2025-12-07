@@ -360,13 +360,14 @@ def setup_secret(
 async def create_admin_user(name: str, email: str, password: str) -> bool:
     """Create admin user in database."""
     try:
+        # Suppress SQLAlchemy logging BEFORE importing engine
+        import logging
+        logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+        logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
+
         # Import here to avoid circular imports and ensure env is loaded
         from dotenv import load_dotenv
         load_dotenv()
-
-        # Suppress SQLAlchemy logging during CLI operations
-        import logging
-        logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
         from app.database.connection import engine
         from app.models.user import User
@@ -407,16 +408,18 @@ def setup_admin(
     email: Optional[str] = None,
     password: Optional[str] = None,
     interactive: bool = True,
+    show_header: bool = True,
 ):
     """
     Create a super admin user.
 
     Requires database to be configured and migrations to be run.
     """
-    console.print(Panel.fit(
-        "[bold cyan]Create Super Admin[/bold cyan]",
-        border_style="cyan"
-    ))
+    if show_header:
+        console.print(Panel.fit(
+            "[bold cyan]Create Super Admin[/bold cyan]",
+            border_style="cyan"
+        ))
 
     # Interactive prompts
     if interactive:
