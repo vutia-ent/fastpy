@@ -12,7 +12,9 @@ from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.timing import TimingMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.session_context import SessionContextMiddleware
-from app.middleware.security_headers import SecurityHeadersMiddleware
+# Security headers middleware removed - was too restrictive for dev template
+# Add back when ready for production with proper CSP configuration
+# from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.utils.exceptions import (
     AppException,
     app_exception_handler,
@@ -100,8 +102,9 @@ app.add_middleware(RequestIDMiddleware)
 # 5. Session context middleware (enables Active Record pattern)
 app.add_middleware(SessionContextMiddleware)
 
-# 6. Security headers middleware
-app.add_middleware(SecurityHeadersMiddleware)
+# 6. Security headers middleware (disabled - too restrictive for dev)
+# Uncomment when ready for production with proper CSP configuration
+# app.add_middleware(SecurityHeadersMiddleware)
 
 # Include routers
 app.include_router(health_router, prefix="/health", tags=["Health"])
