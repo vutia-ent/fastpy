@@ -364,6 +364,10 @@ async def create_admin_user(name: str, email: str, password: str) -> bool:
         from dotenv import load_dotenv
         load_dotenv()
 
+        # Suppress SQLAlchemy logging during CLI operations
+        import logging
+        logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
         from app.database.connection import engine
         from app.models.user import User
         from app.utils.auth import get_password_hash

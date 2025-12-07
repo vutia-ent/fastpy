@@ -3886,6 +3886,10 @@ def cmd_make_admin(
         fastpy make:admin                                           # Interactive
         fastpy make:admin -n "Admin" -e admin@example.com -p secret # Non-interactive
     """
+    # Suppress SQLAlchemy SQL logging during admin creation
+    import logging
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
     from app.cli.setup import setup_admin
     setup_admin(
         name=name,
