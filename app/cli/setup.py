@@ -163,7 +163,14 @@ def check_database_exists(config: DatabaseConfig) -> bool:
             env["PGPASSWORD"] = config.password
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False)
-            return config.database in result.stdout
+            # Parse psql output: each line is "dbname | owner | encoding | ..."
+            # Use exact match to avoid false positives (e.g., "app" matching "myapp")
+            for line in result.stdout.split("\n"):
+                if "|" in line:
+                    db_name = line.split("|")[0].strip()
+                    if db_name == config.database:
+                        return True
+            return False
         except Exception:
             return False
 
